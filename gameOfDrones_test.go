@@ -152,3 +152,202 @@ func TestColonizeTheUnexploredTwo(t *testing.T) {
 		t.Error("Wrong number of different destinations:", len(destinations))
 	}
 }
+
+//Tests method maintainAirSuperiority with zero zones owned
+func TestMaintainAirSuperiority0(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned0.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	if len(dronesAsigned) != 0 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+}
+
+//Tests method maintainAirSuperiority with one zone owned 1 Vs 0
+func TestMaintainAirSuperiority1Vs0(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned1Vs0.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	if len(dronesAsigned) != 0 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+}
+
+//Tests method maintainAirSuperiority with one zone owned 1 Vs 1
+func TestMaintainAirSuperiority1Vs1(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned1Vs1.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	if len(dronesAsigned) != 1 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	destinations := make(map[point]bool, 2)
+	for d, _ := range dronesAsigned {
+		if nextMove[d].x == 300 && nextMove[d].y == 300 {
+			destinations[nextMove[d]] = true
+		}
+	}
+	if len(destinations) != 1 {
+		t.Error("Wrong number of different destinations:", len(destinations))
+	}
+}
+
+//Tests method maintainAirSuperiority with one zone owned 2 Vs 1
+func TestMaintainAirSuperiority2Vs1(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned2Vs1.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	if len(dronesAsigned) != 1 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	destinations := make(map[point]bool, 1)
+	for d, _ := range dronesAsigned {
+		if nextMove[d].x == 300 && nextMove[d].y == 300 {
+			destinations[nextMove[d]] = true
+		}
+	}
+	if len(destinations) != 1 {
+		t.Error("Wrong number of different destinations:", len(destinations))
+	}
+}
+
+//Tests method maintainAirSuperiority with one zone owned 2 Vs 2
+func TestMaintainAirSuperiority2Vs2(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned2Vs2.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	if len(dronesAsigned) != 2 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	destinations := make(map[point]bool, 2)
+	for d, _ := range dronesAsigned {
+		if (nextMove[d].x == 300 && nextMove[d].y == 300) ||
+			(nextMove[d].x == 300 && nextMove[d].y == 300) {
+			destinations[nextMove[d]] = true
+		}
+	}
+	if len(destinations) != 1 {
+		t.Error("Wrong number of different destinations:", len(destinations))
+	}
+}
+
+//Tests method maintainAirSuperiority with one zone owned 2 Vs 1 + 1
+func TestMaintainAirSuperiority2Vs1Plus1(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned2Vs1plus1.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	if len(dronesAsigned) != 1 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	destinations := make(map[point]bool, 1)
+	for d, _ := range dronesAsigned {
+		if nextMove[d].x == 300 && nextMove[d].y == 300 {
+			destinations[nextMove[d]] = true
+		}
+	}
+	if len(destinations) != 1 {
+		t.Error("Wrong number of different destinations:", len(destinations))
+	}
+}
+
+//Tests method playerDronesInZone when there is no drone in the zone
+func TestPlayerDronesInZoneZero(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "playerDronesInZone\\input0.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	drones := playerDronesInZone(0, 2)
+
+	if len(drones) != 0 {
+		t.Error("Wrong number of drones in zone:", len(drones))
+	}
+}
+
+//Tests method playerDronesInZone when there is one drone in the zone
+func TestPlayerDronesInZoneOne(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "playerDronesInZone\\input1.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	drones := playerDronesInZone(0, 2)
+
+	if len(drones) != 1 {
+		t.Error("Wrong number of drones in zone:", len(drones))
+	}
+	if _, isThere := drones[0]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+}
+
+//Tests method playerDronesInZone when there are two drones in the zone
+func TestPlayerDronesInZoneTwo(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "playerDronesInZone\\input2.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	drones := playerDronesInZone(0, 2)
+
+	if len(drones) != 2 {
+		t.Error("Wrong number of drones in zone:", len(drones))
+	}
+	if _, isThere := drones[0]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+	if _, isThere := drones[1]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+}

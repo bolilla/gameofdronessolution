@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	DEBUG          = false  //True iff traces are activated
+	DEBUG          = true   //True iff traces are activated
 	ZONE_RADIUS    = 100.0  //Radius of the zones
 	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
 	MAX_DISTANCE   = 44     //Number of turns to cross the board
@@ -34,19 +34,34 @@ var ( //turn-related variables
 	dronesAsigned map[int]bool //Drones that have a destination asigned in this turn
 )
 
+type point struct {
+	x, y int
+}
+
+type player struct {
+	score  int     //Number of points of this player
+	drones []point //position of each drone
+}
+
+//Contains the center of the zone and current owner
+type zone struct {
+	pos   point
+	owner int
+}
+
+func newZone() zone {
+	return zone{point{-1, -1}, -1}
+}
+
 //Prints the movements of own drones
 func play() {
-	decideMovement()
+	initializeTurnComputation()
+	maintainAirSuperiority()
+	colonizeTheUnexplored()
+	stratEachDroneToNearestZone()
 	for _, m := range nextMove {
 		fmt.Println(m.x, m.y)
 	}
-}
-
-//Calculates the movement for each of the drones
-func decideMovement() {
-	initializeTurnComputation()
-	colonizeTheUnexplored()
-	stratEachDroneToNearestZone()
 }
 
 //Clears old turn's data and calculates this turn key information
@@ -56,12 +71,57 @@ func initializeTurnComputation() {
 	dronesAsigned = make(map[int]bool, numDronesPerplayer)
 }
 
+//Calsulates the movements for unasigned drones based on the following strategy:
+//- If (1+ drone is inside an owned zone AND there are enemies in the same zone)
+//    air superiority cannot be lost (cannot abandon zone and leave air superiority to the oponent)
+func maintainAirSuperiority() {
+	for zId, z := range zones {
+		if z.owner == whoami {
+			myDrones := playerDronesInZone(whoami, zId)
+			numHostiles := mostDronesBySingleOponentInZone(zId)
+			i := 0
+			for dId, _ := range myDrones {
+				if i >= numHostiles {
+					break
+				}
+				asignDestination(dId, players[whoami].drones[dId])
+				i += 1
+			}
+		}
+	}
+}
+
+//Returns the number of drones of the oponent who has most oponents in the given zone
+func mostDronesBySingleOponentInZone(zId int) int {
+	result := 0
+	for pId, _ := range players {
+		if pId == whoami {
+			continue
+		}
+		if currentPlayerDronesInZone := len(playerDronesInZone(pId, zId)); currentPlayerDronesInZone > result {
+			result = currentPlayerDronesInZone
+		}
+	}
+	return result
+}
+
+//Returns a set of ids of the drones of given player that are inside given zone
+func playerDronesInZone(pId, zId int) map[int]bool {
+	result := make(map[int]bool)
+	for dId, d := range players[pId].drones {
+		if turnBasedDistance(zones[zId].pos, d) == 0 {
+			result[dId] = true
+		}
+	}
+	return result
+}
+
 //Calculates the movements for unasigned drones based on the following strategy:
 //- If there is an unreclaimed zone, nearest drone goes for it
 func colonizeTheUnexplored() {
 	zoneIds := unreclaimedZones()
 	for zId, _ := range zoneIds {
-		dId := nearestOwnDrone(zones[zId].pos)
+		dId := nearestFreeOwnDrone(zones[zId].pos)
 		if dId != -1 {
 			asignDestination(dId, zones[zId].pos)
 		}
@@ -69,7 +129,7 @@ func colonizeTheUnexplored() {
 }
 
 //Returns the Id of the nearest drone I control (and has not been sent to other duties) to the given point
-func nearestOwnDrone(p point) int {
+func nearestFreeOwnDrone(p point) int {
 	minDist := BOARD_DIAGONAL
 	bestDrone := -1
 	for dId, d := range players[whoami].drones {
@@ -144,25 +204,6 @@ func turnBasedDistance(pointA, pointB point) int {
 func euclideanDistance(pointA, pointB point) float64 {
 	return math.Floor(math.Sqrt((float64(pointB.x-pointA.x) * float64(pointB.x-pointA.x)) +
 		(float64(pointB.y-pointA.y) * float64(pointB.y-pointA.y))))
-}
-
-type point struct {
-	x, y int
-}
-
-type player struct {
-	score  int     //Number of points of this player
-	drones []point //position of each drone
-}
-
-//Contains the center of the zone and current owner
-type zone struct {
-	pos   point
-	owner int
-}
-
-func newZone() zone {
-	return zone{point{-1, -1}, -1}
 }
 
 //Reads the game initialization information
@@ -266,4 +307,6 @@ func debug(x ...interface{}) {
 IDEAS:
 - Calculate "centroid" of the board based on the zones' locations. Move drones to the position in the zone neares to the center of the board
 - Different strategies depending on whether I am winning (based on actual score of all players, zones under my control and remaining turns)
+- Take into account oponents' possible movements
+- Take into account oponents' drones' distances to owned zones
 */
