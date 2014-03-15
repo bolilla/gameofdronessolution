@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	DEBUG          = true   //True iff traces are activated
+	DEBUG          = false  //True iff traces are activated
 	ZONE_RADIUS    = 100.0  //Radius of the zones
 	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
 	MAX_DISTANCE   = 44     //Number of turns to cross the board
@@ -58,9 +58,23 @@ func play() {
 	initializeTurnComputation()
 	maintainAirSuperiority()
 	colonizeTheUnexplored()
+	goForUnguardedZones()
 	stratEachDroneToNearestZone()
 	for _, m := range nextMove {
 		fmt.Println(m.x, m.y)
+	}
+}
+
+//Calculates the movements for unasigned drones based on the following strategy:
+//- If there is an unguarded zone, nearest drone goes to take it
+func goForUnguardedZones() {
+	for zId, z := range zones {
+		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesInZone(z.owner, zId)) == 0 {
+			dId := nearestFreeOwnDrone(z.pos)
+			if dId >= 0 {
+				asignDestination(dId, z.pos)
+			}
+		}
 	}
 }
 
@@ -71,7 +85,7 @@ func initializeTurnComputation() {
 	dronesAsigned = make(map[int]bool, numDronesPerplayer)
 }
 
-//Calsulates the movements for unasigned drones based on the following strategy:
+//Calculates the movements for unasigned drones based on the following strategy:
 //- If (1+ drone is inside an owned zone AND there are enemies in the same zone)
 //    air superiority cannot be lost (cannot abandon zone and leave air superiority to the oponent)
 func maintainAirSuperiority() {

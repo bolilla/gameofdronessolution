@@ -89,15 +89,7 @@ func TestEuclideanDistance(t *testing.T) {
 
 //Tests method colonizeTheUnexplored with Zero unexplored zones
 func TestColonizeTheUnexploredZero(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "colonizeTheUnexplored\\inputZero.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputZero.txt", t)
 	colonizeTheUnexplored()
 	if len(dronesAsigned) != 0 {
 		t.Error("Too many drones asigned:", len(dronesAsigned))
@@ -106,15 +98,7 @@ func TestColonizeTheUnexploredZero(t *testing.T) {
 
 //Tests method colonizeTheUnexplored with One unexplored zone
 func TestColonizeTheUnexploredOne(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "colonizeTheUnexplored\\inputOne.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputOne.txt", t)
 	colonizeTheUnexplored()
 	if len(dronesAsigned) != 1 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -128,15 +112,7 @@ func TestColonizeTheUnexploredOne(t *testing.T) {
 
 //Tests method colonizeTheUnexplored with Two unexplored zones
 func TestColonizeTheUnexploredTwo(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "colonizeTheUnexplored\\inputTwo.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputTwo.txt", t)
 	colonizeTheUnexplored()
 	if len(dronesAsigned) != 2 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -155,15 +131,8 @@ func TestColonizeTheUnexploredTwo(t *testing.T) {
 
 //Tests method maintainAirSuperiority with zero zones owned
 func TestMaintainAirSuperiority0(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned0.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned0.txt", t)
+
 	maintainAirSuperiority()
 	if len(dronesAsigned) != 0 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -172,15 +141,8 @@ func TestMaintainAirSuperiority0(t *testing.T) {
 
 //Tests method maintainAirSuperiority with one zone owned 1 Vs 0
 func TestMaintainAirSuperiority1Vs0(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned1Vs0.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned1Vs0.txt", t)
+
 	maintainAirSuperiority()
 	if len(dronesAsigned) != 0 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -189,15 +151,8 @@ func TestMaintainAirSuperiority1Vs0(t *testing.T) {
 
 //Tests method maintainAirSuperiority with one zone owned 1 Vs 1
 func TestMaintainAirSuperiority1Vs1(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned1Vs1.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned1Vs1.txt", t)
+
 	maintainAirSuperiority()
 	if len(dronesAsigned) != 1 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -215,15 +170,7 @@ func TestMaintainAirSuperiority1Vs1(t *testing.T) {
 
 //Tests method maintainAirSuperiority with one zone owned 2 Vs 1
 func TestMaintainAirSuperiority2Vs1(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned2Vs1.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned2Vs1.txt", t)
 	maintainAirSuperiority()
 	if len(dronesAsigned) != 1 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -241,15 +188,8 @@ func TestMaintainAirSuperiority2Vs1(t *testing.T) {
 
 //Tests method maintainAirSuperiority with one zone owned 2 Vs 2
 func TestMaintainAirSuperiority2Vs2(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned2Vs2.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned2Vs2.txt", t)
+
 	maintainAirSuperiority()
 	if len(dronesAsigned) != 2 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -268,15 +208,8 @@ func TestMaintainAirSuperiority2Vs2(t *testing.T) {
 
 //Tests method maintainAirSuperiority with one zone owned 2 Vs 1 + 1
 func TestMaintainAirSuperiority2Vs1Plus1(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "maintainAirSuperiority\\inputOwned2Vs1plus1.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
-	initializeTurnComputation()
+	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned2Vs1plus1.txt", t)
+
 	maintainAirSuperiority()
 	if len(dronesAsigned) != 1 {
 		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
@@ -294,14 +227,7 @@ func TestMaintainAirSuperiority2Vs1Plus1(t *testing.T) {
 
 //Tests method playerDronesInZone when there is no drone in the zone
 func TestPlayerDronesInZoneZero(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "playerDronesInZone\\input0.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
+	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input0.txt", t)
 	drones := playerDronesInZone(0, 2)
 
 	if len(drones) != 0 {
@@ -311,14 +237,8 @@ func TestPlayerDronesInZoneZero(t *testing.T) {
 
 //Tests method playerDronesInZone when there is one drone in the zone
 func TestPlayerDronesInZoneOne(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "playerDronesInZone\\input1.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
+	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input1.txt", t)
+
 	drones := playerDronesInZone(0, 2)
 
 	if len(drones) != 1 {
@@ -331,14 +251,7 @@ func TestPlayerDronesInZoneOne(t *testing.T) {
 
 //Tests method playerDronesInZone when there are two drones in the zone
 func TestPlayerDronesInZoneTwo(t *testing.T) {
-	if f, err := os.Open(FILE_TESTS_BASE + "playerDronesInZone\\input2.txt"); err != nil {
-		t.Error("Error opening input file")
-	} else {
-		inputReader = f
-		defer f.Close()
-	}
-	readBoard()
-	parseTurn()
+	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input2.txt", t)
 	drones := playerDronesInZone(0, 2)
 
 	if len(drones) != 2 {
@@ -350,4 +263,84 @@ func TestPlayerDronesInZoneTwo(t *testing.T) {
 	if _, isThere := drones[1]; !isThere {
 		t.Error("Wrong drone in the zone", drones)
 	}
+}
+
+//Tests method goForUnguardedZones when there are no unguarded zones
+func TestGoForUnguardedZonesZero(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input0.txt", t)
+	goForUnguardedZones()
+
+	if len(dronesAsigned) != 0 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+}
+
+//Tests method goForUnguardedZones when there is one unguarded zone and three available drones
+func TestGoForUnguardedZonesOneForThree(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input1For3.txt", t)
+	goForUnguardedZones()
+
+	if len(dronesAsigned) != 1 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	if _, isThere := dronesAsigned[1]; !isThere {
+		t.Error("Wrong drone in the zone", dronesAsigned)
+	}
+	if nextMove[1].x != 300 || nextMove[1].y != 300 {
+		t.Error("Wrong move", nextMove[1])
+	}
+}
+
+//Tests method goForUnguardedZones when there are two unguarded zones and one available drone
+func TestGoForUnguardedZonesTwoForOne(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input2For1.txt", t)
+	asignDestination(0, point{0, 0})
+	asignDestination(1, point{0, 0})
+	goForUnguardedZones()
+
+	if len(dronesAsigned) != 3 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	if _, isThere := dronesAsigned[2]; !isThere {
+		t.Error("Wrong drone in the zone", dronesAsigned)
+	}
+	if nextMove[2].x != 200 || nextMove[2].y != 200 {
+		t.Error("Wrong move", nextMove[2])
+	}
+}
+
+//Tests method goForUnguardedZones when there are two unguarded zones and two available drones
+func TestGoForUnguardedZonesTwoForTwo(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input2For2.txt", t)
+	asignDestination(0, point{0, 0})
+	goForUnguardedZones()
+
+	if len(dronesAsigned) != 3 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	if _, isThere := dronesAsigned[0]; !isThere {
+		t.Error("Wrong drone in the zone", dronesAsigned)
+	}
+	if _, isThere := dronesAsigned[1]; !isThere {
+		t.Error("Wrong drone in the zone", dronesAsigned)
+	}
+	if nextMove[1].x != 200 || nextMove[1].y != 200 {
+		t.Error("Wrong move", nextMove[1])
+	}
+	if nextMove[2].x != 300 || nextMove[2].y != 300 {
+		t.Error("Wrong move", nextMove[2])
+	}
+}
+
+//Sets up the test reading current status from a certain file
+func setUpTestFromFile(path string, t *testing.T) {
+	if f, err := os.Open(path); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
 }
