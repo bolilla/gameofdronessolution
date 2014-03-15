@@ -15,52 +15,60 @@ const (
 	MAX_DISTANCE   = 44    //Number of turns to cross the board
 )
 
-var (
-	numPlayers         int       //Number of players in the game
-	numZones           int       //Number of zones in the game
-	players            []player  //all the player of drones. Array index = player's ID
-	numDronesPerplayer int       //Number of drones each player has
-	whoami             int       //index of my player in the array of players
-	zones              []zone    //all game zones
-	distances          [][][]int //Distances for each of the players, for each of the drones to each of the zones
+var ( //board-related variables
+	numPlayers         int      //Number of players in the game
+	numZones           int      //Number of zones in the game
+	numDronesPerplayer int      //Number of drones each player has
+	whoami             int      //index of my player in the array of players
+	players            []player //all the player of drones. Array index = player's ID
+	zones              []zone   //all game zones
+)
+
+var ( //turn-related variables
+	distances     [][][]int    //Distances for each of the players, for each of the drones to each of the zones
+	nextMove      []point      //destination for each of my drones
+	dronesAsigned map[int]bool //Drones that have a destination asigned in this turn
 )
 
 //Prints the movements of own drones
 func play() {
-	// Do not move any drone
-	for _, m := range decideMovement() {
+	decideMovement()
+	for _, m := range nextMove {
 		fmt.Println(m.x, m.y)
 	}
 }
 
-//Returns the movement for each of the drones
-func decideMovement() []point {
-	return stratEachDroneToNearestZone()
+//Calculates the movement for each of the drones
+func decideMovement() {
+	initializeTurnComputation()
+	stratEachDroneToNearestZone()
 }
 
-//Returns the movements based on the following strategy:
-//- Each drone moves to its nearest zone
-//- [NO] Only a drone per zone
-//- Move to the center of the zone
-func stratEachDroneToNearestZone() []point {
-	result := make([]point, numDronesPerplayer)
+//Clears old turn's data and calculates this turn key information
+func initializeTurnComputation() {
 	calculateDistances()
-	//	zonesWithDrone := make(map[int]bool, numZones)
+	nextMove = make([]point, numDronesPerplayer)
+	dronesAsigned = make(map[int]bool, numDronesPerplayer)
+}
+
+//Calculates the movements for the remaining drones based on the following strategy:
+//- Each drone moves to its nearest zone
+//- Move to the center of the zone
+func stratEachDroneToNearestZone() {
 	for dId := 0; dId < numDronesPerplayer; dId += 1 {
+		if _, isDroneAsigned := dronesAsigned[dId]; isDroneAsigned {
+			continue
+		}
 		minDist := MAX_DISTANCE
 		bestZone := -1
 		for zId := 0; zId < numZones; zId += 1 {
-			//if _, occupied := zonesWithDrone[zId]; !occupied && distances[whoami][dId][zId] <= minDist {
 			if distances[whoami][dId][zId] <= minDist {
 				minDist = distances[whoami][dId][zId]
 				bestZone = zId
 			}
 		}
-		result[dId] = zones[bestZone].pos
-		//zonesWithDrone[bestZone] = true
+		nextMove[dId] = zones[bestZone].pos
 	}
-
-	return result
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -158,6 +166,7 @@ func main() {
 		debug("Current status:", players, whoami, zones)
 		play()
 	}
+	debug("End status:", players, whoami, zones)
 }
 
 func debug(x ...interface{}) {
