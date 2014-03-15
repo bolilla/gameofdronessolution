@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math"
@@ -9,19 +10,22 @@ import (
 )
 
 const (
-	DEBUG          = false //True iff traces are activated
-	ZONE_RADIUS    = 100.0 //Radius of the zones
-	DRONE_MOVEMENT = 100.0 //Maximum movement of a drone in a turn
-	MAX_DISTANCE   = 44    //Number of turns to cross the board
+	DEBUG          = false  //True iff traces are activated
+	ZONE_RADIUS    = 100.0  //Radius of the zones
+	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
+	MAX_DISTANCE   = 44     //Number of turns to cross the board
+	BOARD_DIAGONAL = 4387.0 //Length of the diagonal of the board (maximum distance between two points)
+	UNRECLAIMED    = -1     //Owner of unreclaimed zones
 )
 
 var ( //board-related variables
-	numPlayers         int      //Number of players in the game
-	numZones           int      //Number of zones in the game
-	numDronesPerplayer int      //Number of drones each player has
-	whoami             int      //index of my player in the array of players
-	players            []player //all the player of drones. Array index = player's ID
-	zones              []zone   //all game zones
+	inputReader        io.Reader //Where the information is read (os.Stdin for play, a file for testing)
+	numPlayers         int       //Number of players in the game
+	numZones           int       //Number of zones in the game
+	numDronesPerplayer int       //Number of drones each player has
+	whoami             int       //index of my player in the array of players
+	players            []player  //all the player of drones. Array index = player's ID
+	zones              []zone    //all game zones
 )
 
 var ( //turn-related variables
@@ -41,6 +45,7 @@ func play() {
 //Calculates the movement for each of the drones
 func decideMovement() {
 	initializeTurnComputation()
+	colonizeTheUnexplored()
 	stratEachDroneToNearestZone()
 }
 
@@ -49,6 +54,44 @@ func initializeTurnComputation() {
 	calculateDistances()
 	nextMove = make([]point, numDronesPerplayer)
 	dronesAsigned = make(map[int]bool, numDronesPerplayer)
+}
+
+//Calculates the movements for unasigned drones based on the following strategy:
+//- If there is an unreclaimed zone, nearest drone goes for it
+func colonizeTheUnexplored() {
+	zoneIds := unreclaimedZones()
+	for zId, _ := range zoneIds {
+		dId := nearestOwnDrone(zones[zId].pos)
+		if dId != -1 {
+			asignDestination(dId, zones[zId].pos)
+		}
+	}
+}
+
+//Returns the Id of the nearest drone I control (and has not been sent to other duties) to the given point
+func nearestOwnDrone(p point) int {
+	minDist := BOARD_DIAGONAL
+	bestDrone := -1
+	for dId, d := range players[whoami].drones {
+		if _, isAssigned := dronesAsigned[dId]; !isAssigned {
+			if currentDistance := euclideanDistance(d, p); currentDistance <= minDist {
+				minDist = currentDistance
+				bestDrone = dId
+			}
+		}
+	}
+	return bestDrone
+}
+
+//Returns the zones that remain unreclaimed
+func unreclaimedZones() map[int]bool {
+	result := make(map[int]bool, numZones)
+	for i, z := range zones {
+		if z.owner == UNRECLAIMED {
+			result[i] = true
+		}
+	}
+	return result
 }
 
 //Calculates the movements for the remaining drones based on the following strategy:
@@ -67,8 +110,14 @@ func stratEachDroneToNearestZone() {
 				bestZone = zId
 			}
 		}
-		nextMove[dId] = zones[bestZone].pos
+		asignDestination(dId, zones[bestZone].pos)
 	}
+}
+
+//Asigns a drone to a destination
+func asignDestination(dId int, p point) {
+	nextMove[dId] = p
+	dronesAsigned[dId] = true
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -82,7 +131,7 @@ func calculateDistances() {
 	}
 }
 
-//Calculates the number of turns that it would take to each drone to reach each zone
+//Calculates the number of turns that it would take a drone to move from pointA to pointB
 func turnBasedDistance(pointA, pointB point) int {
 	euc := euclideanDistance(pointA, pointB)
 	if euc < ZONE_RADIUS {
@@ -102,6 +151,7 @@ type point struct {
 }
 
 type player struct {
+	score  int     //Number of points of this player
 	drones []point //position of each drone
 }
 
@@ -116,8 +166,8 @@ func newZone() zone {
 }
 
 //Reads the game initialization information
-func readBoard(in io.Reader) {
-	fmt.Scanf("%d %d %d %d\n", &numPlayers, &whoami, &numDronesPerplayer, &numZones)
+func readBoard() {
+	fmt.Fscanf(inputReader, "%d %d %d %d\n", &numPlayers, &whoami, &numDronesPerplayer, &numZones)
 	players = make([]player, numPlayers)
 	for i, _ := range players {
 		players[i].drones = make([]point, numDronesPerplayer)
@@ -125,7 +175,7 @@ func readBoard(in io.Reader) {
 	zones = make([]zone, numZones)
 	for i, _ := range zones {
 		zones[i] = newZone()
-		fmt.Fscanf(in, "%d %d\n", &zones[i].pos.x, &zones[i].pos.y)
+		fmt.Fscanf(inputReader, "%d %d\n", &zones[i].pos.x, &zones[i].pos.y)
 	}
 	distances = make([][][]int, numPlayers)
 	for pId := 0; pId < numPlayers; pId += 1 {
@@ -137,18 +187,21 @@ func readBoard(in io.Reader) {
 }
 
 //Reads the information of a turn
-func parseTurn(in io.Reader) bool {
+func parseTurn() bool {
 	for i, _ := range zones {
-		_, err := fmt.Fscanf(in, "%d\n", &zones[i].owner)
+		_, err := fmt.Fscanf(inputReader, "%d\n", &zones[i].owner)
 		if err != nil {
 			fmt.Println("Error reading turn zones owners:", err)
 			return false
+		}
+		if zones[i].owner >= 0 {
+			players[zones[i].owner].score += 1
 		}
 	}
 
 	for i, _ := range players {
 		for j, _ := range players[i].drones {
-			_, err := fmt.Fscanf(in, "%d %d\n", &players[i].drones[j].x, &players[i].drones[j].y)
+			_, err := fmt.Fscanf(inputReader, "%d %d\n", &players[i].drones[j].x, &players[i].drones[j].y)
 			if err != nil {
 				fmt.Println("Error reading turn drones:", err)
 				return false
@@ -160,17 +213,57 @@ func parseTurn(in io.Reader) bool {
 
 //Unleashes the beast
 func main() {
-	readBoard(os.Stdin)
-	debug("Initial status:", players, whoami, zones)
-	for parseTurn(os.Stdin) {
-		debug("Current status:", players, whoami, zones)
-		play()
-	}
-	debug("End status:", players, whoami, zones)
+	inputReader = os.Stdin
+	letTheGameBegin() //..hear the starting gun
 }
 
+//Plays the came of drones
+func letTheGameBegin() {
+	readBoard()
+	debug("Initial status:", status())
+	for parseTurn() {
+		debug("Current status:", status())
+		play()
+	}
+	debug("End status:", status())
+}
+
+//Returns the status of the play if debug is enabled
+func status() string {
+	var result bytes.Buffer
+	if DEBUG {
+		result.Write([]byte("Players:\n"))
+		for pId, p := range players {
+			var numZonesPlayer int
+			for _, z := range zones {
+				if z.owner == pId {
+					numZonesPlayer += 1
+				}
+			}
+			var playerName string
+			if pId == whoami {
+				playerName = "(ME)"
+			} else {
+				playerName = "    "
+			}
+			result.Write([]byte(fmt.Sprintf("  %d%s- score: %d numZones: %d Drones: %v\n",
+				pId, playerName, p.score, numZonesPlayer, p.drones)))
+		}
+		result.Write([]byte("Zones:\n"))
+		for zId, z := range zones {
+			result.Write([]byte(fmt.Sprintf("  %d - owner: %d location: %v\n", zId, z.owner, z.pos)))
+		}
+	}
+	return result.String()
+}
 func debug(x ...interface{}) {
 	if DEBUG {
 		fmt.Println(x)
 	}
 }
+
+/*
+IDEAS:
+- Calculate "centroid" of the board based on the zones' locations. Move drones to the position in the zone neares to the center of the board
+- Different strategies depending on whether I am winning (based on actual score of all players, zones under my control and remaining turns)
+*/

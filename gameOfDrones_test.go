@@ -2,10 +2,11 @@
 package main
 
 import (
+	"os"
 	"testing"
 )
 
-const FILE_TESTS_BASE = `C:\Users\borja\programacion\codinggame\GameOfDronesSolution\testInputs`
+const FILE_TESTS_BASE = `C:\Users\borja\programacion\codinggame\GameOfDronesSolution\testInputs\`
 
 //Tests method turnBasedDistance
 func TestTurnBasedDistance(t *testing.T) {
@@ -83,5 +84,71 @@ func TestEuclideanDistance(t *testing.T) {
 		if result := euclideanDistance(testCase.in1, testCase.in2); testCase.out != result {
 			t.Error("Error in item", i, "Got", result, "Expected", testCase.out, "Case:", testCase)
 		}
+	}
+}
+
+//Tests method colonizeTheUnexplored with Zero unexplored zones
+func TestColonizeTheUnexploredZero(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "colonizeTheUnexplored\\inputZero.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	colonizeTheUnexplored()
+	if len(dronesAsigned) != 0 {
+		t.Error("Too many drones asigned:", len(dronesAsigned))
+	}
+}
+
+//Tests method colonizeTheUnexplored with One unexplored zone
+func TestColonizeTheUnexploredOne(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "colonizeTheUnexplored\\inputOne.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	colonizeTheUnexplored()
+	if len(dronesAsigned) != 1 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	for d, _ := range dronesAsigned {
+		if nextMove[d].x != 100 || nextMove[d].y != 100 {
+			t.Error("Wrong movement. Going to", nextMove[d])
+		}
+	}
+}
+
+//Tests method colonizeTheUnexplored with Two unexplored zones
+func TestColonizeTheUnexploredTwo(t *testing.T) {
+	if f, err := os.Open(FILE_TESTS_BASE + "colonizeTheUnexplored\\inputTwo.txt"); err != nil {
+		t.Error("Error opening input file")
+	} else {
+		inputReader = f
+		defer f.Close()
+	}
+	readBoard()
+	parseTurn()
+	initializeTurnComputation()
+	colonizeTheUnexplored()
+	if len(dronesAsigned) != 2 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	destinations := make(map[point]bool, 2)
+	for d, _ := range dronesAsigned {
+		if (nextMove[d].x == 100 && nextMove[d].y == 100) ||
+			(nextMove[d].x == 200 && nextMove[d].y == 200) {
+			destinations[nextMove[d]] = true
+		}
+	}
+	if len(destinations) != 2 {
+		t.Error("Wrong number of different destinations:", len(destinations))
 	}
 }
