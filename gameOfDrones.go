@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"time"
 )
 
 const (
@@ -303,11 +304,15 @@ func main() {
 
 //Plays the came of drones
 func letTheGameBegin() {
+
+	tFrom := time.Now()
 	readBoard()
 	debug("Initial status:", status())
-	for parseTurn() {
+	debug(fmt.Sprintf("Initialization computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
+	for tFrom = time.Now(); parseTurn(); tFrom = time.Now() {
 		debug("Current status:", status())
 		play()
+		debug(fmt.Sprintf("Turn computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	}
 	debug("End status:", status())
 }
@@ -342,7 +347,7 @@ func status() string {
 }
 func debug(x ...interface{}) {
 	if DEBUG {
-		fmt.Println(x)
+		fmt.Fprintln(os.Stderr, x)
 	}
 }
 
