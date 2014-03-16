@@ -129,6 +129,26 @@ func TestColonizeTheUnexploredTwo(t *testing.T) {
 	}
 }
 
+//Tests method colonizeTheUnexplored with an unreclaimed zone that already contains drones from different players
+func TestColonizeTheUnexploredUnreclaimedPopulated(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputUnconqueredButPopulated.txt", t)
+	colonizeTheUnexplored()
+	if len(dronesAsigned) != 2 {
+		t.Error("Wrong number of drones asigned:", len(dronesAsigned))
+	}
+	destinations := make(map[point]bool, 2)
+	for d, _ := range dronesAsigned {
+		if nextMove[d].x != 100 || nextMove[d].y != 100 {
+			t.Error("Wrong movement. Going to", nextMove[d])
+		} else {
+			destinations[nextMove[d]] = true
+		}
+	}
+	if len(destinations) != 1 {
+		t.Error("Wrong number of different destinations:", len(destinations), dronesAsigned)
+	}
+}
+
 //Tests method maintainAirSuperiority with zero zones owned
 func TestMaintainAirSuperiority0(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned0.txt", t)

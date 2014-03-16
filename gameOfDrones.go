@@ -131,12 +131,17 @@ func playerDronesInZone(pId, zId int) map[int]bool {
 }
 
 //Calculates the movements for unasigned drones based on the following strategy:
-//- If there is an unreclaimed zone, nearest drone goes for it
+//- If there is an unreclaimed zone:
+//  + Drones inside that zone stay put
+//  + Nearest drone (outside the zone) goes for it
 func colonizeTheUnexplored() {
-	zoneIds := unreclaimedZones()
-	for zId, _ := range zoneIds {
-		dId := nearestFreeOwnDrone(zones[zId].pos)
-		if dId != -1 {
+	for zId, _ := range unreclaimedZones() {
+		for dId, d := range players[whoami].drones {
+			if turnBasedDistance(d, zones[zId].pos) == 0 {
+				asignDestination(dId, zones[zId].pos)
+			}
+		}
+		if dId := nearestFreeOwnDrone(zones[zId].pos); dId != -1 {
 			asignDestination(dId, zones[zId].pos)
 		}
 	}
@@ -323,4 +328,7 @@ IDEAS:
 - Different strategies depending on whether I am winning (based on actual score of all players, zones under my control and remaining turns)
 - Take into account oponents' possible movements
 - Take into account oponents' drones' distances to owned zones
+- should air superiority include drones at distance 1?
+- Last strategy: go for the "centroid" (the center of all zones)
+- Decide nearest drone per euclidean distance instead of per turns?
 */
