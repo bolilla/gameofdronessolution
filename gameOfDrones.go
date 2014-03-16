@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	DEBUG          = false  //True iff traces are activated
+	DEBUG          = true   //True iff traces are activated
 	ZONE_RADIUS    = 100.0  //Radius of the zones
 	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
 	MAX_DISTANCE   = 44     //Number of turns to cross the board
@@ -26,12 +26,13 @@ var ( //board-related variables
 	whoami             int       //index of my player in the array of players
 	players            []player  //all the player of drones. Array index = player's ID
 	zones              []zone    //all game zones
+	centroid           point     //Centroid of the zones
 )
 
 var ( //turn-related variables
-	distances     [][][]int    //Distances for each of the players, for each of the drones to each of the zones
-	nextMove      []point      //destination for each of my drones
-	dronesAsigned map[int]bool //Drones that have a destination asigned in this turn
+	distances      [][][]int    //Distances for each of the players, for each of the drones to each of the zones
+	nextMove       []point      //destination for each of my drones
+	assignedDrones map[int]bool //Drones that have a destination asigned in this turn
 )
 
 type point struct {
@@ -59,7 +60,8 @@ func play() {
 	maintainAirSuperiority()
 	colonizeTheUnexplored()
 	goForUnguardedZones()
-	stratEachDroneToNearestZone()
+	defaultToCentroid()
+	//defaultEachDroneToNearestZone()
 	for _, m := range nextMove {
 		fmt.Println(m.x, m.y)
 	}
@@ -72,7 +74,7 @@ func goForUnguardedZones() {
 		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesInZone(z.owner, zId)) == 0 {
 			dId := nearestFreeOwnDrone(z.pos)
 			if dId >= 0 {
-				asignDestination(dId, z.pos)
+				assignDestination(dId, z.pos)
 			}
 		}
 	}
@@ -82,7 +84,7 @@ func goForUnguardedZones() {
 func initializeTurnComputation() {
 	calculateDistances()
 	nextMove = make([]point, numDronesPerplayer)
-	dronesAsigned = make(map[int]bool, numDronesPerplayer)
+	assignedDrones = make(map[int]bool, numDronesPerplayer)
 }
 
 //Calculates the movements for unasigned drones based on the following strategy:
@@ -98,7 +100,7 @@ func maintainAirSuperiority() {
 				if i >= numHostiles {
 					break
 				}
-				asignDestination(dId, players[whoami].drones[dId])
+				assignDestination(dId, players[whoami].drones[dId])
 				i += 1
 			}
 		}
@@ -138,11 +140,11 @@ func colonizeTheUnexplored() {
 	for zId, _ := range unreclaimedZones() {
 		for dId, d := range players[whoami].drones {
 			if turnBasedDistance(d, zones[zId].pos) == 0 {
-				asignDestination(dId, zones[zId].pos)
+				assignDestination(dId, zones[zId].pos)
 			}
 		}
 		if dId := nearestFreeOwnDrone(zones[zId].pos); dId != -1 {
-			asignDestination(dId, zones[zId].pos)
+			assignDestination(dId, zones[zId].pos)
 		}
 	}
 }
@@ -152,7 +154,7 @@ func nearestFreeOwnDrone(p point) int {
 	minDist := BOARD_DIAGONAL
 	bestDrone := -1
 	for dId, d := range players[whoami].drones {
-		if _, isAssigned := dronesAsigned[dId]; !isAssigned {
+		if _, isAssigned := assignedDrones[dId]; !isAssigned {
 			if currentDistance := euclideanDistance(d, p); currentDistance <= minDist {
 				minDist = currentDistance
 				bestDrone = dId
@@ -174,11 +176,21 @@ func unreclaimedZones() map[int]bool {
 }
 
 //Calculates the movements for the remaining drones based on the following strategy:
-//- Each drone moves to its nearest zone
-//- Move to the center of the zone
-func stratEachDroneToNearestZone() {
+//- Each remaining drone moves to the centroid of the board
+func defaultToCentroid() {
 	for dId := 0; dId < numDronesPerplayer; dId += 1 {
-		if _, isDroneAsigned := dronesAsigned[dId]; isDroneAsigned {
+		if _, isDroneAsigned := assignedDrones[dId]; isDroneAsigned {
+			continue
+		}
+		assignDestination(dId, centroid)
+	}
+}
+
+//Calculates the movements for the remaining drones based on the following strategy:
+//- Each remaining drone moves to the centre of its nearest zone
+func defaultToNearestZone() {
+	for dId := 0; dId < numDronesPerplayer; dId += 1 {
+		if _, isDroneAsigned := assignedDrones[dId]; isDroneAsigned {
 			continue
 		}
 		minDist := MAX_DISTANCE
@@ -189,14 +201,14 @@ func stratEachDroneToNearestZone() {
 				bestZone = zId
 			}
 		}
-		asignDestination(dId, zones[bestZone].pos)
+		assignDestination(dId, zones[bestZone].pos)
 	}
 }
 
 //Asigns a drone to a destination
-func asignDestination(dId int, p point) {
+func assignDestination(dId int, p point) {
 	nextMove[dId] = p
-	dronesAsigned[dId] = true
+	assignedDrones[dId] = true
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -225,6 +237,17 @@ func euclideanDistance(pointA, pointB point) float64 {
 		(float64(pointB.y-pointA.y) * float64(pointB.y-pointA.y))))
 }
 
+//Returns the centroid of the zones. i.e. The point that is at the same minimum distance from all zones
+func getCentroid(zs []zone) (result point) {
+	for _, z := range zs {
+		result.x += z.pos.x
+		result.y += z.pos.y
+	}
+	result.x /= len(zs)
+	result.y /= len(zs)
+	return result
+}
+
 //Reads the game initialization information
 func readBoard() {
 	fmt.Fscanf(inputReader, "%d %d %d %d\n", &numPlayers, &whoami, &numDronesPerplayer, &numZones)
@@ -244,6 +267,7 @@ func readBoard() {
 			distances[pId][dId] = make([]int, numZones)
 		}
 	}
+	centroid = getCentroid(zones)
 }
 
 //Reads the information of a turn
