@@ -410,3 +410,66 @@ func TestDefaultToCentre(t *testing.T) {
 		t.Error("Wrong move", nextMove[2])
 	}
 }
+
+//Tests method attackable:
+//- Test 1
+//  + Zone 0 is not attackable because it is unreclaimed
+//  + If I set zone0 to the enemy, it is attackable
+//  + If I set zone0 to myself, it is no longer attackable
+// - Test2
+//  + Zone 2 is not attackable because it contains three enemy drones and I only have three available free
+//  + If I remove one of enemy's drones, it is attackable
+//  + If I asign a drone to any destination, it is not attackable
+//  + If I put all drones in the zone and unassigned, it is NOT attackable because I cannot gain air superiority
+//  + If I remove one of enemy's drones, it is attackable
+func TestAttackable(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\input.txt", t)
+	attackTest1(t)
+	attackTest2(t)
+}
+
+//Described abobe
+func attackTest1(t *testing.T) {
+	if attackable(0) {
+		t.Error("Zone 0 should NOT be attackable. It should be unreclaimed.", zones[0])
+	}
+	zones[0].owner = whoami + 1
+	if !attackable(0) {
+		t.Error("Zone 0 should be attackable.", zones[0])
+	}
+	zones[0].owner = whoami
+	if attackable(0) {
+		t.Error("Zone 0 should NOT be attackable. It belongs to me", zones[0])
+	}
+}
+
+//Described abobe
+func attackTest2(t *testing.T) {
+	if attackable(2) {
+		t.Error("Zone 2 should NOT be attackable. I cannot gain air superiority", status())
+	}
+	players[1].drones[0] = point{0, 0}
+	if !attackable(2) {
+		t.Error("Zone 2 should be attackable. I should be able to gain air superiority (even when all my drones are unassigned).", status())
+	}
+	assignDestination(0, zones[2].pos) //should work even when destination is the zone I pretend to atack
+	if attackable(2) {
+		t.Error("Zone 2 should NOT be attackable. I have assigned one drone and only two should be available.", status())
+	}
+	initializeTurnComputation() //To free up all drones
+	for pId, _ := range players {
+		for dId, _ := range players[pId].drones {
+			players[pId].drones[dId] = zones[2].pos
+		}
+	}
+	for dId, _ := range players[whoami].drones {
+		assignDestination(dId, zones[2].pos)
+	}
+	if attackable(2) {
+		t.Error("Zone 2 should NOT be attackable. I cannot gain air superiority (even when all my drones are inside the zone", status())
+	}
+	players[1].drones[0] = point{0, 0}
+	if !attackable(2) {
+		t.Error("Zone 2 should be attackable. I have enough drones inside the zone", status())
+	}
+}

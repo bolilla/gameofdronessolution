@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -61,11 +62,83 @@ func play() {
 	maintainAirSuperiority()
 	colonizeTheUnexplored()
 	goForUnguardedZones()
+	attackGuardedZones()
 	defaultToCentroid()
 	//defaultEachDroneToNearestZone()
 	for _, m := range nextMove {
 		fmt.Println(m.x, m.y)
 	}
+}
+
+type attack struct {
+	target   int          //ID of the zone to attack
+	distance int          // Number of turns the farthest drone must go
+	force    map[int]bool //Set of drones that will make the attack
+}
+
+//Implements sort.Interface
+type attackSorter []attack
+
+//Necessary to implement sort.Interface
+func (as attackSorter) Less(i, j int) bool {
+	if len(as[i].force) < len(as[j].force) {
+		return true
+	}
+	return as[i].distance < as[j].distance
+}
+
+//Necessary to implement sort.Interface
+func (as attackSorter) Swap(i, j int) {
+	as[i], as[j] = as[j], as[i]
+}
+
+//Necessary to implement sort.Interface
+func (as attackSorter) Len() int {
+	return len(as)
+}
+
+//Calculates the movements for unasigned drones based on the following strategy:
+//- while there is an attackable zone
+//  + For all attackable zones
+//    * Define attack
+//  + Choose best attack
+func attackGuardedZones() {
+	for numAttackableZones := 2; numAttackableZones > 1; {
+		numAttackableZones = 0
+		attacks := make([]attack, 0, numZones)
+		for zId, _ := range zones {
+			if attackable(zId) {
+				numAttackableZones += 1
+				attacks = append(attacks, defineAttack(zId))
+			}
+		}
+		if numAttackableZones > 0 {
+			sort.Sort(attackSorter(attacks))
+			a := attacks[0]
+			for dId, _ := range a.force {
+				assignDestination(dId, zones[a.target].pos)
+			}
+		}
+	}
+}
+
+//Defines the attack over a zone
+func defineAttack(zId int) (result attack) {
+	result.target = zId
+	numDronesOwner := len(playerDronesInZone(zones[zId].owner, zId))
+	numDronesMe := len(playerDronesInZone(whoami, zId))
+	numFreeDrones := numDronesPerplayer - len(assignedDrones)
+	result.force = make(map[int]bool, numDronesOwner+1)
+	for required := 0; required <= numDronesOwner-numDronesMe+numFreeDrones; required += 1 {
+		nearest := nearestFreeOwnDrone(zones[zId].pos)
+		result.force[nearest] = true
+	}
+	for dId, _ := range result.force {
+		if thisDistance := turnBasedDistance(players[whoami].drones[dId], zones[zId].pos); thisDistance > result.distance {
+			result.distance = thisDistance
+		}
+	}
+	return result
 }
 
 //Calculates the movements for unasigned drones based on the following strategy:
@@ -249,6 +322,17 @@ func getCentroid(zs []zone) (result point) {
 	return result
 }
 
+//Returns whether given zone can be attacked with remaining forces
+func attackable(zId int) bool {
+	if zones[zId].owner == whoami || zones[zId].owner == UNRECLAIMED {
+		return false
+	}
+	numDronesOwner := len(playerDronesInZone(zones[zId].owner, zId))
+	numDronesMe := len(playerDronesInZone(whoami, zId))
+	numFreeDrones := numDronesPerplayer - len(assignedDrones)
+	return numDronesOwner < numDronesMe+numFreeDrones
+}
+
 //Reads the game initialization information
 func readBoard() {
 	fmt.Fscanf(inputReader, "%d %d %d %d\n", &numPlayers, &whoami, &numDronesPerplayer, &numZones)
@@ -335,8 +419,17 @@ func status() string {
 			} else {
 				playerName = "    "
 			}
-			result.Write([]byte(fmt.Sprintf("  %d%s- score: %d numZones: %d Drones: %v\n",
-				pId, playerName, p.score, numZonesPlayer, p.drones)))
+			result.Write([]byte(fmt.Sprintf("  %d%s- score: %d numZones: %d Drones: ",
+				pId, playerName, p.score, numZonesPlayer)))
+			result.Write([]byte("["))
+			for dId, d := range p.drones {
+				if _, isAssigned := assignedDrones[dId]; isAssigned && pId == whoami {
+					result.Write([]byte(fmt.Sprintf("%v* ", d)))
+				} else {
+					result.Write([]byte(fmt.Sprintf("%v  ", d)))
+				}
+			}
+			result.Write([]byte("]\n"))
 		}
 		result.Write([]byte("Zones:\n"))
 		for zId, z := range zones {
