@@ -156,7 +156,7 @@ func defineAttack(zId int) (result attack) {
 	result.force = make(map[int]bool, numDronesOwner+1)
 	availableDrones := make(map[int]bool, numDronesPerplayer-len(assignedDrones))
 	for dId, _ := range players[whoami].drones {
-		if _, isAssigned := assignedDrones[dId]; !isAssigned {
+		if _, isAssigned := assignedDrones[dId]; !isAssigned || turnBasedDistance(zones[zId].pos, nextMove[dId]) > 0 {
 			availableDrones[dId] = true
 		}
 	}
