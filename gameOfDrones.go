@@ -59,12 +59,13 @@ func newZone() zone {
 //Prints the movements of own drones
 func play() {
 	initializeTurnComputation()
+
 	maintainAirSuperiority()
-	colonizeTheUnexplored()
-	goForUnguardedZones()
+	//colonizeTheUnexplored()
+	//goForUnguardedZones()
 	attackGuardedZones()
-	defaultToCentroid()
-	//defaultEachDroneToNearestZone()
+	//defaultToCentroid()
+	defaultToNearestZone()
 	for _, m := range nextMove {
 		fmt.Println(m.x, m.y)
 	}
@@ -103,41 +104,64 @@ func (as attackSorter) Len() int {
 //    * Define attack
 //  + Choose best attack
 func attackGuardedZones() {
-	for numAttackableZones := 2; numAttackableZones > 1; {
-		numAttackableZones = 0
+	attackableZones := make(map[int]bool, numZones)
+	for zId, _ := range zones {
+		if attackable(zId) {
+			attackableZones[zId] = true
+		}
+	}
+	//debug("numAttackableZones before", len(attackableZones))
+	for len(attackableZones) > 1 {
 		attacks := make([]attack, 0, numZones)
-		for zId, _ := range zones {
+		for zId, _ := range attackableZones {
 			if attackable(zId) {
-				numAttackableZones += 1
 				attacks = append(attacks, defineAttack(zId))
+			} else {
+				delete(attackableZones, zId)
 			}
 		}
-		if numAttackableZones > 0 {
+		//debug("numAttackableZones before", len(attackableZones))
+		//debug("attacks", attacks)
+		if len(attacks) > 0 {
 			sort.Sort(attackSorter(attacks))
+			//debug("sorted attacks", attacks)
 			a := attacks[0]
+			debug("Ordering attack on", a)
 			for dId, _ := range a.force {
-				assignDestination(dId, zones[a.target].pos)
+				assignDestination(dId, zones[a.target].pos, "Zone must be ours!!!")
 			}
+			delete(attackableZones, a.target)
 		}
 	}
 }
 
 //Defines the attack over a zone
 func defineAttack(zId int) (result attack) {
+	//debug("Defining attack on", zId, ":", zones[zId])
 	result.target = zId
-	numDronesOwner := len(playerDronesInZone(zones[zId].owner, zId))
+	var numDronesOwner int
+	if zones[zId].owner != UNRECLAIMED {
+		numDronesOwner = len(playerDronesInZone(zones[zId].owner, zId))
+	} else {
+		numDronesOwner = mostDronesBySingleOponentInZone(zId)
+	}
 	numDronesMe := len(playerDronesInZone(whoami, zId))
 	numFreeDrones := numDronesPerplayer - len(assignedDrones)
+	//debug("numDronesOwner", numDronesOwner, "numDronesMe", numDronesMe, "numFreeDrones", numFreeDrones)
 	result.force = make(map[int]bool, numDronesOwner+1)
-	for required := 0; required <= numDronesOwner-numDronesMe+numFreeDrones; required += 1 {
+	for required := 0; required < numDronesOwner-numDronesMe+numFreeDrones; required += 1 {
 		nearest := nearestFreeOwnDrone(zones[zId].pos)
+		//debug("Adding", nearest, "to the attack force")
 		result.force[nearest] = true
 	}
+	//debug("result.force", result.force)
 	for dId, _ := range result.force {
 		if thisDistance := turnBasedDistance(players[whoami].drones[dId], zones[zId].pos); thisDistance > result.distance {
 			result.distance = thisDistance
 		}
 	}
+	//debug("result.distance", result.distance)
+	//debug("Best attack to zone", zId, ":", result)
 	return result
 }
 
@@ -148,7 +172,7 @@ func goForUnguardedZones() {
 		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesInZone(z.owner, zId)) == 0 {
 			dId := nearestFreeOwnDrone(z.pos)
 			if dId >= 0 {
-				assignDestination(dId, z.pos)
+				assignDestination(dId, z.pos, "Zone is unguarded")
 			}
 		}
 	}
@@ -171,11 +195,13 @@ func maintainAirSuperiority() {
 			numHostiles := mostDronesBySingleOponentInZone(zId)
 			i := 0
 			for dId, _ := range myDrones {
-				if i >= numHostiles {
-					break
+				if _, isAssigned := assignedDrones[dId]; !isAssigned {
+					if i >= numHostiles {
+						break
+					}
+					assignDestination(dId, players[whoami].drones[dId], "Zone air supperiority must be maintained")
+					i += 1
 				}
-				assignDestination(dId, players[whoami].drones[dId])
-				i += 1
 			}
 		}
 	}
@@ -203,6 +229,7 @@ func playerDronesInZone(pId, zId int) map[int]bool {
 			result[dId] = true
 		}
 	}
+	//debug("Number of drones of player", pId, "in zone", zId, ":", result)
 	return result
 }
 
@@ -214,11 +241,11 @@ func colonizeTheUnexplored() {
 	for zId, _ := range unreclaimedZones() {
 		for dId, d := range players[whoami].drones {
 			if turnBasedDistance(d, zones[zId].pos) == 0 {
-				assignDestination(dId, zones[zId].pos)
+				assignDestination(dId, zones[zId].pos, "I am in an unreclaimed zone and so is the enemy")
 			}
 		}
 		if dId := nearestFreeOwnDrone(zones[zId].pos); dId != -1 {
-			assignDestination(dId, zones[zId].pos)
+			assignDestination(dId, zones[zId].pos, "Zone is unguarded")
 		}
 	}
 }
@@ -256,7 +283,7 @@ func defaultToCentroid() {
 		if _, isDroneAsigned := assignedDrones[dId]; isDroneAsigned {
 			continue
 		}
-		assignDestination(dId, centroid)
+		assignDestination(dId, centroid, "The centroid must be ours")
 	}
 }
 
@@ -275,14 +302,15 @@ func defaultToNearestZone() {
 				bestZone = zId
 			}
 		}
-		assignDestination(dId, zones[bestZone].pos)
+		assignDestination(dId, zones[bestZone].pos, "It is my nearest zone")
 	}
 }
 
 //Asigns a drone to a destination
-func assignDestination(dId int, p point) {
+func assignDestination(dId int, p point, reason string) {
 	nextMove[dId] = p
 	assignedDrones[dId] = true
+	debug("Moving drone", dId, "to", p, "because:", reason)
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -307,8 +335,10 @@ func turnBasedDistance(pointA, pointB point) int {
 
 //Returns the euclidean distance between two points
 func euclideanDistance(pointA, pointB point) float64 {
-	return math.Floor(math.Sqrt((float64(pointB.x-pointA.x) * float64(pointB.x-pointA.x)) +
+	result := math.Floor(math.Sqrt((float64(pointB.x-pointA.x) * float64(pointB.x-pointA.x)) +
 		(float64(pointB.y-pointA.y) * float64(pointB.y-pointA.y))))
+	//debug("Euclidean distance", pointA, pointB, "=", result)
+	return result
 }
 
 //Returns the centroid of the zones. i.e. The point that is at the same minimum distance from all zones
@@ -324,10 +354,15 @@ func getCentroid(zs []zone) (result point) {
 
 //Returns whether given zone can be attacked with remaining forces
 func attackable(zId int) bool {
-	if zones[zId].owner == whoami || zones[zId].owner == UNRECLAIMED {
+	if zones[zId].owner == whoami {
 		return false
 	}
-	numDronesOwner := len(playerDronesInZone(zones[zId].owner, zId))
+	var numDronesOwner int
+	if zones[zId].owner != UNRECLAIMED {
+		numDronesOwner = len(playerDronesInZone(zones[zId].owner, zId))
+	} else {
+		numDronesOwner = mostDronesBySingleOponentInZone(zId)
+	}
 	numDronesMe := len(playerDronesInZone(whoami, zId))
 	numFreeDrones := numDronesPerplayer - len(assignedDrones)
 	return numDronesOwner < numDronesMe+numFreeDrones
@@ -394,11 +429,34 @@ func letTheGameBegin() {
 	debug("Initial status:", status())
 	debug(fmt.Sprintf("Initialization computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	for tFrom = time.Now(); parseTurn(); tFrom = time.Now() {
+		debug("XXX")
+		debug(importableStatus())
+		debug("XXX")
 		debug("Current status:", status())
 		play()
 		debug(fmt.Sprintf("Turn computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	}
 	debug("End status:", status())
+}
+
+//Returns the status in a format that can be directly imported for testing
+func importableStatus() string {
+	var result bytes.Buffer
+	if DEBUG {
+		result.Write([]byte(fmt.Sprintf("\n%d %d %d %d\n", numPlayers, whoami, numDronesPerplayer, numZones)))
+		for _, z := range zones {
+			result.Write([]byte(fmt.Sprintf("%d %d\n", z.pos.x, z.pos.y)))
+		}
+		for _, z := range zones {
+			result.Write([]byte(fmt.Sprintf("%d\n", z.owner)))
+		}
+		for _, p := range players {
+			for _, d := range p.drones {
+				result.Write([]byte(fmt.Sprintf("%d %d\n", d.x, d.y)))
+			}
+		}
+	}
+	return result.String()
 }
 
 //Returns the status of the play if debug is enabled
