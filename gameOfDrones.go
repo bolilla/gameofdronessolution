@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DEBUG          = true   //True iff traces are activated
+	DEBUG          = false  //True iff traces are activated
 	PROFILING      = false  //True iff profiling must be activated
 	ZONE_RADIUS    = 100.0  //Radius of the zones
 	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
@@ -342,14 +342,14 @@ func defaultToNearestZone() {
 func assignDestinationZone(dId, zId int, reason string) {
 	assignedDrones[dId] = true
 	nextMove[dId] = zones[zId].pos
-	trace("Moving drone", dId, "to zone", zId, "because", reason)
+	turnInfo("Moving drone", dId, "to zone", zId, "because", reason)
 }
 
 //Assigns a drone to a point in the map
 func assignDestinationPoint(dId int, p point, reason string) {
 	assignedDrones[dId] = true
 	nextMove[dId] = p
-	trace("Moving drone", dId, "to point", p, "because", reason)
+	turnInfo("Moving drone", dId, "to point", p, "because", reason)
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -487,34 +487,32 @@ func letTheGameBegin() {
 
 	tFrom := time.Now()
 	readBoard()
-	trace("Initial status:", status())
-	trace(fmt.Sprintf("Initialization computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
+	turnInfo("Initial status:", status())
+	turnInfo(fmt.Sprintf("Initialization computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	for tFrom = time.Now(); parseTurn(); tFrom = time.Now() {
-		trace("XXX")
-		trace(importableStatus())
-		trace("XXX")
-		trace("Current status:", status())
+		turnInfo("XXX")
+		turnInfo(importableStatus())
+		turnInfo("XXX")
+		turnInfo("Current status:", status())
 		play()
-		trace(fmt.Sprintf("Turn computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
+		turnInfo(fmt.Sprintf("Turn computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	}
-	trace("End status:", status())
+	turnInfo("End status:", status())
 }
 
 //Returns the status in a format that can be directly imported for testing
 func importableStatus() string {
 	var result bytes.Buffer
-	if DEBUG {
-		result.Write([]byte(fmt.Sprintf("\n%d %d %d %d\n", numPlayers, whoami, numDronesPerplayer, numZones)))
-		for _, z := range zones {
-			result.Write([]byte(fmt.Sprintf("%d %d\n", z.pos.x, z.pos.y)))
-		}
-		for _, z := range zones {
-			result.Write([]byte(fmt.Sprintf("%d\n", z.owner)))
-		}
-		for _, p := range players {
-			for _, d := range p.drones {
-				result.Write([]byte(fmt.Sprintf("%d %d\n", d.x, d.y)))
-			}
+	result.Write([]byte(fmt.Sprintf("\n%d %d %d %d\n", numPlayers, whoami, numDronesPerplayer, numZones)))
+	for _, z := range zones {
+		result.Write([]byte(fmt.Sprintf("%d %d\n", z.pos.x, z.pos.y)))
+	}
+	for _, z := range zones {
+		result.Write([]byte(fmt.Sprintf("%d\n", z.owner)))
+	}
+	for _, p := range players {
+		for _, d := range p.drones {
+			result.Write([]byte(fmt.Sprintf("%d %d\n", d.x, d.y)))
 		}
 	}
 	return result.String()
@@ -523,37 +521,35 @@ func importableStatus() string {
 //Returns the status of the play if debug is enabled
 func status() string {
 	var result bytes.Buffer
-	if DEBUG {
-		result.Write([]byte("Players:\n"))
-		for pId, p := range players {
-			var numZonesPlayer int
-			for _, z := range zones {
-				if z.owner == pId {
-					numZonesPlayer += 1
-				}
+	result.Write([]byte("Players:\n"))
+	for pId, p := range players {
+		var numZonesPlayer int
+		for _, z := range zones {
+			if z.owner == pId {
+				numZonesPlayer += 1
 			}
-			var playerName string
-			if pId == whoami {
-				playerName = "(ME)"
+		}
+		var playerName string
+		if pId == whoami {
+			playerName = "(ME)"
+		} else {
+			playerName = "    "
+		}
+		result.Write([]byte(fmt.Sprintf("  %d%s- score: %d numZones: %d Drones: ",
+			pId, playerName, p.score, numZonesPlayer)))
+		result.Write([]byte("["))
+		for dId, d := range p.drones {
+			if _, isAssigned := assignedDrones[dId]; isAssigned && pId == whoami {
+				result.Write([]byte(fmt.Sprintf("%v* ", d)))
 			} else {
-				playerName = "    "
+				result.Write([]byte(fmt.Sprintf("%v  ", d)))
 			}
-			result.Write([]byte(fmt.Sprintf("  %d%s- score: %d numZones: %d Drones: ",
-				pId, playerName, p.score, numZonesPlayer)))
-			result.Write([]byte("["))
-			for dId, d := range p.drones {
-				if _, isAssigned := assignedDrones[dId]; isAssigned && pId == whoami {
-					result.Write([]byte(fmt.Sprintf("%v* ", d)))
-				} else {
-					result.Write([]byte(fmt.Sprintf("%v  ", d)))
-				}
-			}
-			result.Write([]byte("]\n"))
 		}
-		result.Write([]byte("Zones:\n"))
-		for zId, z := range zones {
-			result.Write([]byte(fmt.Sprintf("  %d - owner: %d location: %v\n", zId, z.owner, z.pos)))
-		}
+		result.Write([]byte("]\n"))
+	}
+	result.Write([]byte("Zones:\n"))
+	for zId, z := range zones {
+		result.Write([]byte(fmt.Sprintf("  %d - owner: %d location: %v\n", zId, z.owner, z.pos)))
 	}
 	return result.String()
 }
@@ -561,6 +557,11 @@ func trace(x ...interface{}) {
 	if DEBUG {
 		fmt.Fprintln(os.Stderr, x)
 	}
+}
+
+//Writes the main information regarding the actions taken in the turn
+func turnInfo(x ...interface{}) {
+	fmt.Fprintln(os.Stderr, x)
 }
 
 /*
