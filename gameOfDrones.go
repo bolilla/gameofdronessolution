@@ -7,18 +7,22 @@ import (
 	"io"
 	"math"
 	"os"
+	"runtime/pprof"
 	"sort"
 	"time"
 )
 
 const (
 	DEBUG          = true   //True iff traces are activated
+	PROFILING      = true   //True iff profiling must be activated
 	ZONE_RADIUS    = 100.0  //Radius of the zones
 	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
 	MAX_DISTANCE   = 44     //Number of turns to cross the board
 	BOARD_DIAGONAL = 4387.0 //Length of the diagonal of the board (maximum distance between two points)
 	UNRECLAIMED    = -1     //Owner of unreclaimed zones
 )
+
+const PROFILE_PATH = "C:\\Users\\borja\\programacion\\codinggame\\GameOfDronesSolution\\profile.pprof" //Path to the file that stores the profiling information
 
 var ( //board-related variables
 	inputReader        io.Reader //Where the information is read (os.Stdin for play, a file for testing)
@@ -128,7 +132,7 @@ func attackGuardedZones() {
 			a := attacks[0]
 			debug("Ordering attack on", a)
 			for dId, _ := range a.force {
-				assignDestination(dId, zones[a.target].pos, "Zone must be ours!!!")
+				assignDestinationZone(dId, a.target, "Zone must be ours!!!")
 			}
 			delete(attackableZones, a.target)
 		}
@@ -145,12 +149,19 @@ func defineAttack(zId int) (result attack) {
 	} else {
 		numDronesOwner = mostDronesBySingleOponentInZone(zId)
 	}
-	numDronesMe := len(playerDronesInZone(whoami, zId))
-	numFreeDrones := numDronesPerplayer - len(assignedDrones)
+	//numDronesMe := len(playerDronesInZone(whoami, zId))
+	//numFreeDrones := numDronesPerplayer - len(assignedDrones)
 	//debug("numDronesOwner", numDronesOwner, "numDronesMe", numDronesMe, "numFreeDrones", numFreeDrones)
 	result.force = make(map[int]bool, numDronesOwner+1)
-	for required := 0; required < numDronesOwner-numDronesMe+numFreeDrones; required += 1 {
-		nearest := nearestFreeOwnDrone(zones[zId].pos)
+	availableDrones := make(map[int]bool, numDronesPerplayer-len(assignedDrones))
+	for dId, _ := range players[whoami].drones {
+		if _, isAssigned := assignedDrones[dId]; !isAssigned {
+			availableDrones[dId] = true
+		}
+	}
+	for required := 0; required < numDronesOwner+1; required += 1 {
+		nearest := nearestOwnDroneFromSet(zones[zId].pos, availableDrones)
+		delete(availableDrones, nearest)
 		//debug("Adding", nearest, "to the attack force")
 		result.force[nearest] = true
 	}
@@ -172,7 +183,7 @@ func goForUnguardedZones() {
 		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesInZone(z.owner, zId)) == 0 {
 			dId := nearestFreeOwnDrone(z.pos)
 			if dId >= 0 {
-				assignDestination(dId, z.pos, "Zone is unguarded")
+				assignDestinationZone(dId, zId, "Zone is unguarded")
 			}
 		}
 	}
@@ -199,7 +210,7 @@ func maintainAirSuperiority() {
 					if i >= numHostiles {
 						break
 					}
-					assignDestination(dId, players[whoami].drones[dId], "Zone air supperiority must be maintained")
+					assignDestinationZone(dId, zId, "Zone air supperiority must be maintained")
 					i += 1
 				}
 			}
@@ -241,13 +252,27 @@ func colonizeTheUnexplored() {
 	for zId, _ := range unreclaimedZones() {
 		for dId, d := range players[whoami].drones {
 			if turnBasedDistance(d, zones[zId].pos) == 0 {
-				assignDestination(dId, zones[zId].pos, "I am in an unreclaimed zone and so is the enemy")
+				assignDestinationZone(dId, zId, "I am in an unreclaimed zone and so is the enemy")
 			}
 		}
 		if dId := nearestFreeOwnDrone(zones[zId].pos); dId != -1 {
-			assignDestination(dId, zones[zId].pos, "Zone is unguarded")
+			assignDestinationZone(dId, zId, "Zone is unguarded")
 		}
 	}
+}
+
+//Returns the Id of the nearest drone from the set of drones suplied (if the drone is free)
+func nearestOwnDroneFromSet(p point, set map[int]bool) int {
+	minDist := BOARD_DIAGONAL
+	bestDrone := -1
+	for dId, _ := range set {
+		_, isAssigned := assignedDrones[dId]
+		if currentDistance := euclideanDistance(players[whoami].drones[dId], p); currentDistance <= minDist && !isAssigned {
+			minDist = currentDistance
+			bestDrone = dId
+		}
+	}
+	return bestDrone
 }
 
 //Returns the Id of the nearest drone I control (and has not been sent to other duties) to the given point
@@ -283,7 +308,7 @@ func defaultToCentroid() {
 		if _, isDroneAsigned := assignedDrones[dId]; isDroneAsigned {
 			continue
 		}
-		assignDestination(dId, centroid, "The centroid must be ours")
+		assignDestinationPoint(dId, centroid, "The centroid must be ours")
 	}
 }
 
@@ -302,15 +327,22 @@ func defaultToNearestZone() {
 				bestZone = zId
 			}
 		}
-		assignDestination(dId, zones[bestZone].pos, "It is my nearest zone")
+		assignDestinationZone(dId, bestZone, "It is my nearest zone")
 	}
 }
 
-//Asigns a drone to a destination
-func assignDestination(dId int, p point, reason string) {
-	nextMove[dId] = p
+//Asigns a drone to a zone
+func assignDestinationZone(dId, zId int, reason string) {
 	assignedDrones[dId] = true
-	debug("Moving drone", dId, "to", p, "because:", reason)
+	nextMove[dId] = zones[zId].pos
+	debug("Moving drone", dId, "to zone", zId, "because", reason)
+}
+
+//Assigns a drone to a point in the map
+func assignDestinationPoint(dId int, p point, reason string) {
+	assignedDrones[dId] = true
+	nextMove[dId] = p
+	debug("Moving drone", dId, "to point", p, "because", reason)
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -417,6 +449,15 @@ func parseTurn() bool {
 
 //Unleashes the beast
 func main() {
+	if PROFILING {
+		f, err := os.Create(PROFILE_PATH)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(-1)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	inputReader = os.Stdin
 	letTheGameBegin() //..hear the starting gun
 }
