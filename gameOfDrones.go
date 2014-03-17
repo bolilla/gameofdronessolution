@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"runtime/debug"
 	"runtime/pprof"
 	"sort"
 	"time"
@@ -14,7 +15,7 @@ import (
 
 const (
 	DEBUG          = true   //True iff traces are activated
-	PROFILING      = true   //True iff profiling must be activated
+	PROFILING      = false  //True iff profiling must be activated
 	ZONE_RADIUS    = 100.0  //Radius of the zones
 	DRONE_MOVEMENT = 100.0  //Maximum movement of a drone in a turn
 	MAX_DISTANCE   = 44     //Number of turns to cross the board
@@ -114,7 +115,7 @@ func attackGuardedZones() {
 			attackableZones[zId] = true
 		}
 	}
-	//debug("numAttackableZones before", len(attackableZones))
+	//trace("numAttackableZones before", len(attackableZones))
 	for len(attackableZones) > 1 {
 		attacks := make([]attack, 0, numZones)
 		for zId, _ := range attackableZones {
@@ -124,13 +125,13 @@ func attackGuardedZones() {
 				delete(attackableZones, zId)
 			}
 		}
-		//debug("numAttackableZones before", len(attackableZones))
-		//debug("attacks", attacks)
+		//trace("numAttackableZones before", len(attackableZones))
+		//trace("attacks", attacks)
 		if len(attacks) > 0 {
 			sort.Sort(attackSorter(attacks))
-			//debug("sorted attacks", attacks)
+			//trace("sorted attacks", attacks)
 			a := attacks[0]
-			debug("Ordering attack on", a)
+			trace("Ordering attack on", a)
 			for dId, _ := range a.force {
 				assignDestinationZone(dId, a.target, "Zone must be ours!!!")
 			}
@@ -141,7 +142,7 @@ func attackGuardedZones() {
 
 //Defines the attack over a zone
 func defineAttack(zId int) (result attack) {
-	//debug("Defining attack on", zId, ":", zones[zId])
+	trace("Defining attack on", zId, ":", zones[zId])
 	result.target = zId
 	var numDronesOwner int
 	if zones[zId].owner != UNRECLAIMED {
@@ -151,7 +152,7 @@ func defineAttack(zId int) (result attack) {
 	}
 	//numDronesMe := len(playerDronesInZone(whoami, zId))
 	//numFreeDrones := numDronesPerplayer - len(assignedDrones)
-	//debug("numDronesOwner", numDronesOwner, "numDronesMe", numDronesMe, "numFreeDrones", numFreeDrones)
+	//trace("numDronesOwner", numDronesOwner, "numDronesMe", numDronesMe, "numFreeDrones", numFreeDrones)
 	result.force = make(map[int]bool, numDronesOwner+1)
 	availableDrones := make(map[int]bool, numDronesPerplayer-len(assignedDrones))
 	for dId, _ := range players[whoami].drones {
@@ -160,19 +161,19 @@ func defineAttack(zId int) (result attack) {
 		}
 	}
 	for required := 0; required < numDronesOwner+1; required += 1 {
-		nearest := nearestOwnDroneFromSet(zones[zId].pos, availableDrones)
+		nearest := nearestOwnDroneToGoFromSet(zones[zId].pos, availableDrones)
 		delete(availableDrones, nearest)
-		//debug("Adding", nearest, "to the attack force")
+		trace("Adding", nearest, "to the attack force")
 		result.force[nearest] = true
 	}
-	//debug("result.force", result.force)
+	trace("result.force", result.force)
 	for dId, _ := range result.force {
 		if thisDistance := turnBasedDistance(players[whoami].drones[dId], zones[zId].pos); thisDistance > result.distance {
 			result.distance = thisDistance
 		}
 	}
-	//debug("result.distance", result.distance)
-	//debug("Best attack to zone", zId, ":", result)
+	//trace("result.distance", result.distance)
+	//trace("Best attack to zone", zId, ":", result)
 	return result
 }
 
@@ -240,7 +241,7 @@ func playerDronesInZone(pId, zId int) map[int]bool {
 			result[dId] = true
 		}
 	}
-	//debug("Number of drones of player", pId, "in zone", zId, ":", result)
+	//trace("Number of drones of player", pId, "in zone", zId, ":", result)
 	return result
 }
 
@@ -261,12 +262,18 @@ func colonizeTheUnexplored() {
 	}
 }
 
-//Returns the Id of the nearest drone from the set of drones suplied (if the drone is free)
-func nearestOwnDroneFromSet(p point, set map[int]bool) int {
+//Returns the Id of the nearest drone from the set of drones suplied if:
+//- The drone is free
+//OR
+//- If it is inside the zone and is assigned to remain still
+func nearestOwnDroneToGoFromSet(p point, set map[int]bool) int {
 	minDist := BOARD_DIAGONAL
 	bestDrone := -1
 	for dId, _ := range set {
 		_, isAssigned := assignedDrones[dId]
+		if isAssigned && turnBasedDistance(p, players[whoami].drones[dId]) == 0 && turnBasedDistance(nextMove[dId], p) == 0 {
+			return dId
+		}
 		if currentDistance := euclideanDistance(players[whoami].drones[dId], p); currentDistance <= minDist && !isAssigned {
 			minDist = currentDistance
 			bestDrone = dId
@@ -335,14 +342,14 @@ func defaultToNearestZone() {
 func assignDestinationZone(dId, zId int, reason string) {
 	assignedDrones[dId] = true
 	nextMove[dId] = zones[zId].pos
-	debug("Moving drone", dId, "to zone", zId, "because", reason)
+	trace("Moving drone", dId, "to zone", zId, "because", reason)
 }
 
 //Assigns a drone to a point in the map
 func assignDestinationPoint(dId int, p point, reason string) {
 	assignedDrones[dId] = true
 	nextMove[dId] = p
-	debug("Moving drone", dId, "to point", p, "because", reason)
+	trace("Moving drone", dId, "to point", p, "because", reason)
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -369,7 +376,7 @@ func turnBasedDistance(pointA, pointB point) int {
 func euclideanDistance(pointA, pointB point) float64 {
 	result := math.Floor(math.Sqrt((float64(pointB.x-pointA.x) * float64(pointB.x-pointA.x)) +
 		(float64(pointB.y-pointA.y) * float64(pointB.y-pointA.y))))
-	//debug("Euclidean distance", pointA, pointB, "=", result)
+	//trace("Euclidean distance", pointA, pointB, "=", result)
 	return result
 }
 
@@ -395,7 +402,13 @@ func attackable(zId int) bool {
 	} else {
 		numDronesOwner = mostDronesBySingleOponentInZone(zId)
 	}
-	numDronesMe := len(playerDronesInZone(whoami, zId))
+	myDronesInZone := playerDronesInZone(whoami, zId)
+	for dId, _ := range myDronesInZone {
+		if _, isAssigned := assignedDrones[dId]; !isAssigned || turnBasedDistance(zones[zId].pos, nextMove[dId]) > 0 {
+			delete(myDronesInZone, dId)
+		}
+	}
+	numDronesMe := len(myDronesInZone)
 	numFreeDrones := numDronesPerplayer - len(assignedDrones)
 	return numDronesOwner < numDronesMe+numFreeDrones
 }
@@ -458,6 +471,13 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "\n\n\nRecovered while panicking. Status:\n", importableStatus(), "\n\n\n")
+			fmt.Fprint(os.Stderr, string(debug.Stack()))
+		}
+	}()
+
 	inputReader = os.Stdin
 	letTheGameBegin() //..hear the starting gun
 }
@@ -467,17 +487,17 @@ func letTheGameBegin() {
 
 	tFrom := time.Now()
 	readBoard()
-	debug("Initial status:", status())
-	debug(fmt.Sprintf("Initialization computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
+	trace("Initial status:", status())
+	trace(fmt.Sprintf("Initialization computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	for tFrom = time.Now(); parseTurn(); tFrom = time.Now() {
-		debug("XXX")
-		debug(importableStatus())
-		debug("XXX")
-		debug("Current status:", status())
+		trace("XXX")
+		trace(importableStatus())
+		trace("XXX")
+		trace("Current status:", status())
 		play()
-		debug(fmt.Sprintf("Turn computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
+		trace(fmt.Sprintf("Turn computation time: %v microseconds", time.Now().Sub(tFrom).Nanoseconds()/1000))
 	}
-	debug("End status:", status())
+	trace("End status:", status())
 }
 
 //Returns the status in a format that can be directly imported for testing
@@ -537,7 +557,7 @@ func status() string {
 	}
 	return result.String()
 }
-func debug(x ...interface{}) {
+func trace(x ...interface{}) {
 	if DEBUG {
 		fmt.Fprintln(os.Stderr, x)
 	}

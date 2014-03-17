@@ -424,12 +424,12 @@ func TestDefaultToCentre(t *testing.T) {
 //  + If I remove one of enemy's drones, it is attackable
 func TestAttackable(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\input.txt", t)
-	attackTest1(t)
-	attackTest2(t)
+	attackableTest1(t)
+	attackableTest2(t)
 }
 
 //Described abobe
-func attackTest1(t *testing.T) {
+func attackableTest1(t *testing.T) {
 	if !attackable(0) {
 		t.Error("Zone 0 should be attackable because it should be unreclaimed.", zones[0])
 	}
@@ -444,7 +444,7 @@ func attackTest1(t *testing.T) {
 }
 
 //Described abobe
-func attackTest2(t *testing.T) {
+func attackableTest2(t *testing.T) {
 	if attackable(2) {
 		t.Error("Zone 2 should NOT be attackable. I cannot gain air superiority", status())
 	}
@@ -455,6 +455,14 @@ func attackTest2(t *testing.T) {
 	assignDestinationZone(0, 2, "I say so") //should work even when destination is the zone I pretend to atack
 	if attackable(2) {
 		t.Error("Zone 2 should NOT be attackable. I have assigned one drone and only two should be available.", status())
+	}
+	players[whoami].drones[0] = zones[2].pos //If drone 0 is inside the zone, but will remain there, I can achieve air superiority
+	if !attackable(2) {
+		t.Error("Zone 2 should be attackable. I have assigned one drone and only two should be available, but assigned drone is to remain inside the zone.", status())
+	}
+	assignDestinationPoint(0, point{0, 0}, "I say so") //If drone 0 is inside the zone, but will go out (assigned to go out), I cannot gain air superiority
+	if attackable(2) {
+		t.Error("Zone 2 should NOT be attackable. I have assigned one drone to go out of the zone and only two should be available.", status())
 	}
 	initializeTurnComputation() //To free up all drones
 	for pId, _ := range players {
@@ -494,21 +502,39 @@ func TestNearestFreeOwnDrone(t *testing.T) {
 	}
 }
 
-//Tests method nearestOwnDroneFromSet
+//Tests method nearestOwnDroneToGoFromSet
 func TestNearestOwnDroneFromSet(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"NearestFreeOwnDrone\\input.txt", t)
 	set := make(map[int]bool, 2)
+	set[0] = true
 	set[2] = true
 	set[1] = true
-	if result := nearestOwnDroneFromSet(zones[0].pos, set); result != 1 {
+	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 0 {
+		t.Error("Nearest unasigned drone:", result)
+	}
+	assignDestinationZone(0, 0, "I say so")
+	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 0 {
+		t.Error("Nearest unasigned drone:", result)
+	}
+	assignDestinationPoint(0, point{0, 0}, "I say so")
+	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 1 {
+		t.Error("Nearest unasigned drone:", result)
+	}
+	delete(set, 0)
+	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 1 {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(1, point{0, 0}, "I say so")
-	if result := nearestOwnDroneFromSet(zones[0].pos, set); result != 2 {
+	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 2 {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(2, point{0, 0}, "I say so")
-	if result := nearestOwnDroneFromSet(zones[0].pos, set); result != -1 {
+	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != -1 {
 		t.Error("Nearest unasigned drone:", result)
 	}
+}
+
+//Tests method defineAttack
+func TestDefineAttack(t *testing.T) {
+
 }
