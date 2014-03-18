@@ -38,9 +38,13 @@ var ( //board-related variables
 )
 
 var ( //turn-related variables
-	distances      [][][]int    //Distances for each of the players, for each of the drones to each of the zones
-	nextMove       []point      //destination for each of my drones
-	assignedDrones map[int]bool //Drones that have a destination asigned in this turn
+	distances    [][][]int //Distances for each of the players, for each of the drones to each of the zones
+	nextMove     []point   //destination for each of my drones
+	availability struct {
+		numAvailables int   //number of drones with some degree of availability
+		drones        []int //Number of turns the drone can be traveling
+	}
+	//assignedDrones map[int]bool //Drones that have a destination asigned in this turn
 )
 
 /* CONSTANTS AND VARIABLES END ********************************************************************* DATA TYPES BEGIN */
@@ -184,7 +188,7 @@ func strategyDefaultToCentroid() {
 		if isAssigned(dId) {
 			continue
 		}
-		assignDestinationPoint(dId, centroid, "The centroid must be ours")
+		assignDestinationPointNoisy(dId, centroid, "The centroid must be ours")
 	}
 }
 
@@ -265,7 +269,11 @@ func attackable(zId int) bool {
 func initializeTurnComputation() {
 	calculateDistances()
 	nextMove = make([]point, numDronesPerplayer)
-	assignedDrones = make(map[int]bool, numDronesPerplayer)
+	availability.numAvailables = numDronesPerplayer
+	availability.drones = make([]int, numDronesPerplayer)
+	for i, _ := range availability.drones {
+		availability.drones[i] = MAX_DISTANCE
+	}
 }
 
 //Returns the number of drones of the oponent who has most oponents in the given zone
@@ -340,16 +348,20 @@ func unreclaimedZones() map[int]bool {
 
 //Asigns a drone to a zone
 func assignDestinationZone(dId, zId int, reason string) {
-	assignedDrones[dId] = true
-	nextMove[dId] = zones[zId].pos
 	turnInfo("Moving drone", dId, "to zone", zId, "because", reason)
+	assignDestinationPoint(dId, zones[zId].pos)
+}
+
+//Assigns a drone to a point in the map and says so into the output
+func assignDestinationPointNoisy(dId int, p point, reason string) {
+	turnInfo("Moving drone", dId, "to point", p, "because", reason)
+	assignDestinationPoint(dId, p)
 }
 
 //Assigns a drone to a point in the map
-func assignDestinationPoint(dId int, p point, reason string) {
-	assignedDrones[dId] = true
+func assignDestinationPoint(dId int, p point) {
+	availability.drones[dId] = 0
 	nextMove[dId] = p
-	turnInfo("Moving drone", dId, "to point", p, "because", reason)
 }
 
 //Calculates the distances from each of my drones to each of the zones' centres
@@ -392,13 +404,17 @@ func getCentroid(zs []zone) (result point) {
 
 //returns true iff given drone is already assigned to a destination
 func isAssigned(dId int) bool {
-	_, result := assignedDrones[dId]
-	return result
+	return availability.drones[dId] == 0
 }
 
 //Returns the number of assigned drones
-func numAssignedDrones() int {
-	return len(assignedDrones)
+func numAssignedDrones() (result int) {
+	for _, avail := range availability.drones {
+		if avail == 0 {
+			result++
+		}
+	}
+	return result
 }
 
 /* GENERAL UTILITIES END   *********************************************** INPUT PARSING - RELATED OPERATIONS BEGIN ***/
@@ -449,9 +465,8 @@ func parseTurn() bool {
 	return true
 }
 
-/**************************************************************************INPUT PARSING - RELATED OPERATIONS END*****/
+/* INPUT PARSING - RELATED OPERATIONS END ********************************TURN BEGIN/END - RELATED OPERATIONS BEGIN***/
 
-/*************************************************************************TURN BEGIN/END - RELATED OPERATIONS BEGIN***/
 //Unleashes the beast
 func main() {
 	if PROFILING {
@@ -507,9 +522,8 @@ func play() {
 	}
 }
 
-/*************************************************************************TURN BEGIN/END - RELATED OPERATIONS END*****/
+/* TURN BEGIN/END - RELATED OPERATIONS END ****************************************DEBUG - RELATED OPERATIONS BEGIN***/
 
-/**********************************************************************************DEBUG - RELATED OPERATIONS BEGIN***/
 //Returns the status in a format that can be directly imported for testing
 func importableStatus() string {
 	var result bytes.Buffer
@@ -576,7 +590,7 @@ func turnInfo(x ...interface{}) {
 	fmt.Fprintln(os.Stderr, x)
 }
 
-/**********************************************************************************DEBUG - RELATED OPERATIONS END*****/
+/* DEBUG - RELATED OPERATIONS END ******************************************************************* IDEAS BEGIN *****/
 
 /*
 IDEAS:
