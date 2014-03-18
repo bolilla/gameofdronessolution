@@ -87,19 +87,19 @@ func TestEuclideanDistance(t *testing.T) {
 	}
 }
 
-//Tests method colonizeTheUnexplored with Zero unexplored zones
+//Tests method strategyColonizeTheUnexplored with Zero unexplored zones
 func TestColonizeTheUnexploredZero(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputZero.txt", t)
-	colonizeTheUnexplored()
+	strategyColonizeTheUnexplored()
 	if len(assignedDrones) != 0 {
 		t.Error("Too many drones asigned:", len(assignedDrones))
 	}
 }
 
-//Tests method colonizeTheUnexplored with One unexplored zone
+//Tests method strategyColonizeTheUnexplored with One unexplored zone
 func TestColonizeTheUnexploredOne(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputOne.txt", t)
-	colonizeTheUnexplored()
+	strategyColonizeTheUnexplored()
 	if len(assignedDrones) != 1 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -110,10 +110,10 @@ func TestColonizeTheUnexploredOne(t *testing.T) {
 	}
 }
 
-//Tests method colonizeTheUnexplored with Two unexplored zones
+//Tests method strategyColonizeTheUnexplored with Two unexplored zones
 func TestColonizeTheUnexploredTwo(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputTwo.txt", t)
-	colonizeTheUnexplored()
+	strategyColonizeTheUnexplored()
 	if len(assignedDrones) != 2 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -129,10 +129,10 @@ func TestColonizeTheUnexploredTwo(t *testing.T) {
 	}
 }
 
-//Tests method colonizeTheUnexplored with an unreclaimed zone that already contains drones from different players
+//Tests method strategyColonizeTheUnexplored with an unreclaimed zone that already contains drones from different players
 func TestColonizeTheUnexploredUnreclaimedPopulated(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputUnconqueredButPopulated.txt", t)
-	colonizeTheUnexplored()
+	strategyColonizeTheUnexplored()
 	if len(assignedDrones) != 2 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -149,31 +149,31 @@ func TestColonizeTheUnexploredUnreclaimedPopulated(t *testing.T) {
 	}
 }
 
-//Tests method maintainAirSuperiority with zero zones owned
+//Tests method strategyMaintainAirSuperiority with zero zones owned
 func TestMaintainAirSuperiority0(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned0.txt", t)
 
-	maintainAirSuperiority()
+	strategyMaintainAirSuperiority()
 	if len(assignedDrones) != 0 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
 }
 
-//Tests method maintainAirSuperiority with one zone owned 1 Vs 0
+//Tests method strategyMaintainAirSuperiority with one zone owned 1 Vs 0
 func TestMaintainAirSuperiority1Vs0(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned1Vs0.txt", t)
 
-	maintainAirSuperiority()
+	strategyMaintainAirSuperiority()
 	if len(assignedDrones) != 0 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
 }
 
-//Tests method maintainAirSuperiority with one zone owned 1 Vs 1
+//Tests method strategyMaintainAirSuperiority with one zone owned 1 Vs 1
 func TestMaintainAirSuperiority1Vs1(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned1Vs1.txt", t)
 
-	maintainAirSuperiority()
+	strategyMaintainAirSuperiority()
 	if len(assignedDrones) != 1 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -188,10 +188,10 @@ func TestMaintainAirSuperiority1Vs1(t *testing.T) {
 	}
 }
 
-//Tests method maintainAirSuperiority with one zone owned 2 Vs 1
+//Tests method strategyMaintainAirSuperiority with one zone owned 2 Vs 1
 func TestMaintainAirSuperiority2Vs1(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned2Vs1.txt", t)
-	maintainAirSuperiority()
+	strategyMaintainAirSuperiority()
 	if len(assignedDrones) != 1 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -206,11 +206,11 @@ func TestMaintainAirSuperiority2Vs1(t *testing.T) {
 	}
 }
 
-//Tests method maintainAirSuperiority with one zone owned 2 Vs 2
+//Tests method strategyMaintainAirSuperiority with one zone owned 2 Vs 2
 func TestMaintainAirSuperiority2Vs2(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned2Vs2.txt", t)
 
-	maintainAirSuperiority()
+	strategyMaintainAirSuperiority()
 	if len(assignedDrones) != 2 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -226,11 +226,11 @@ func TestMaintainAirSuperiority2Vs2(t *testing.T) {
 	}
 }
 
-//Tests method maintainAirSuperiority with one zone owned 2 Vs 1 + 1
+//Tests method strategyMaintainAirSuperiority with one zone owned 2 Vs 1 + 1
 func TestMaintainAirSuperiority2Vs1Plus1(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned2Vs1plus1.txt", t)
 
-	maintainAirSuperiority()
+	strategyMaintainAirSuperiority()
 	if len(assignedDrones) != 1 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
@@ -285,20 +285,20 @@ func TestPlayerDronesInZoneTwo(t *testing.T) {
 	}
 }
 
-//Tests method goForUnguardedZones when there are no unguarded zones
+//Tests method strategyGoForUnguardedZones when there are no unguarded zones
 func TestGoForUnguardedZonesZero(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input0.txt", t)
-	goForUnguardedZones()
+	strategyGoForUnguardedZones()
 
 	if len(assignedDrones) != 0 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
 	}
 }
 
-//Tests method goForUnguardedZones when there is one unguarded zone and three available drones
+//Tests method strategyGoForUnguardedZones when there is one unguarded zone and three available drones
 func TestGoForUnguardedZonesOneForThree(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input1For3.txt", t)
-	goForUnguardedZones()
+	strategyGoForUnguardedZones()
 
 	if len(assignedDrones) != 1 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
@@ -311,12 +311,12 @@ func TestGoForUnguardedZonesOneForThree(t *testing.T) {
 	}
 }
 
-//Tests method goForUnguardedZones when there are two unguarded zones and one available drone
+//Tests method strategyGoForUnguardedZones when there are two unguarded zones and one available drone
 func TestGoForUnguardedZonesTwoForOne(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input2For1.txt", t)
 	assignDestinationPoint(0, point{0, 0}, "I say so")
 	assignDestinationPoint(1, point{0, 0}, "I say so")
-	goForUnguardedZones()
+	strategyGoForUnguardedZones()
 
 	if len(assignedDrones) != 3 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
@@ -329,11 +329,11 @@ func TestGoForUnguardedZonesTwoForOne(t *testing.T) {
 	}
 }
 
-//Tests method goForUnguardedZones when there are two unguarded zones and two available drones
+//Tests method strategyGoForUnguardedZones when there are two unguarded zones and two available drones
 func TestGoForUnguardedZonesTwoForTwo(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input2For2.txt", t)
 	assignDestinationPoint(0, point{0, 0}, "I say so")
-	goForUnguardedZones()
+	strategyGoForUnguardedZones()
 
 	if len(assignedDrones) != 3 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
@@ -355,7 +355,7 @@ func TestGoForUnguardedZonesTwoForTwo(t *testing.T) {
 //Sets up the test reading current status from a certain file
 func setUpTestFromFile(path string, t *testing.T) {
 	if f, err := os.Open(path); err != nil {
-		t.Error("Error opening input file")
+		t.Error("Error opening input file", path)
 	} else {
 		inputReader = f
 		defer f.Close()
@@ -386,7 +386,7 @@ func TestGetCentroid(t *testing.T) {
 func TestDefaultToCentre(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"toCentre\\input.txt", t)
 	assignDestinationPoint(0, point{0, 0}, "I say so")
-	defaultToCentroid()
+	strategyDefaultToCentroid()
 
 	if len(assignedDrones) != 3 {
 		t.Error("Wrong number of drones asigned:", len(assignedDrones))
@@ -534,7 +534,26 @@ func TestNearestOwnDroneFromSet(t *testing.T) {
 	}
 }
 
-//Tests method defineAttack
-func TestDefineAttack(t *testing.T) {
+//Tests method isAssigned
+func TestIsAssigned(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"toCentre\\input.txt", t)
+	if isAssigned(0) {
+		t.Error("Drone zero should NOT be assigned")
+	}
+	assignDestinationPoint(0, point{0, 0}, "I say so")
+	if !isAssigned(0) {
+		t.Error("Drone zero should be assigned")
+	}
+}
 
+//Tests method numAssignedDrones
+func TestNumAssignedDrones(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"toCentre\\input.txt", t)
+	if numAssignedDrones() != 0 {
+		t.Error("All drones should be free")
+	}
+	assignDestinationPoint(0, point{0, 0}, "I say so")
+	if numAssignedDrones() != 1 {
+		t.Error("All drones but one should be free")
+	}
 }
