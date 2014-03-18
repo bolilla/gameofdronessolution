@@ -27,6 +27,7 @@ const (
 const PROFILE_PATH = "C:\\Users\\borja\\programacion\\codinggame\\GameOfDronesSolution\\profile.pprof" //Path to the file that stores the profiling information
 
 var ( //board-related variables
+	realExecution      bool      // True iff the execution is made via "main" function
 	inputReader        io.Reader //Where the information is read (os.Stdin for play, a file for testing)
 	numPlayers         int       //Number of players in the game
 	numZones           int       //Number of zones in the game
@@ -587,7 +588,9 @@ func trace(x ...interface{}) {
 
 //Writes the main information regarding the actions taken in the turn
 func turnInfo(x ...interface{}) {
-	fmt.Fprintln(os.Stderr, x)
+	if realExecution {
+		fmt.Fprintln(os.Stderr, x)
+	}
 }
 
 /* DEBUG - RELATED OPERATIONS END ******************************************************************* IDEAS BEGIN *****/
