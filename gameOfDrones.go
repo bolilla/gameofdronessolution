@@ -524,6 +524,7 @@ func parseTurn() bool {
 
 //Unleashes the beast
 func main() {
+	realExecution = true
 	if PROFILING {
 		f, err := os.Create(PROFILE_PATH)
 		if err != nil {
@@ -619,12 +620,8 @@ func status() string {
 		result.Write([]byte(fmt.Sprintf("  %d%s- score: %d numZones: %d Drones: ",
 			pId, playerName, p.score, numZonesPlayer)))
 		result.Write([]byte("["))
-		for dId, d := range p.drones {
-			if isAssigned(dId) && pId == whoami {
-				result.Write([]byte(fmt.Sprintf("%v* ", d)))
-			} else {
-				result.Write([]byte(fmt.Sprintf("%v  ", d)))
-			}
+		for _, d := range p.drones {
+			result.Write([]byte(fmt.Sprintf("%v ", d)))
 		}
 		result.Write([]byte("]\n"))
 	}
