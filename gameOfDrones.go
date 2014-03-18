@@ -134,7 +134,7 @@ func strategyAttackGuardedZones() {
 //- If there is an unguarded zone, nearest drone goes to take it
 func strategyGoForUnguardedZones() {
 	for zId, z := range zones {
-		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesInZone(z.owner, zId)) == 0 {
+		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesNearZone(z.owner, zId, 0)) == 0 {
 			dId := nearestFreeOwnDrone(z.pos)
 			if dId >= 0 {
 				assignDestinationZone(dId, zId, "Zone is unguarded")
@@ -149,7 +149,7 @@ func strategyGoForUnguardedZones() {
 func strategyMaintainAirSuperiority() {
 	for zId, z := range zones {
 		if z.owner == whoami {
-			myDrones := playerDronesInZone(whoami, zId)
+			myDrones := playerDronesNearZone(whoami, zId, 0)
 			numHostiles := mostDronesBySingleOponentInZone(zId)
 			i := 0
 			for dId, _ := range myDrones {
@@ -219,7 +219,7 @@ func defineAttack(zId int) (result attack) {
 	result.target = zId
 	var numDronesOwner int
 	if zones[zId].owner != UNRECLAIMED {
-		numDronesOwner = len(playerDronesInZone(zones[zId].owner, zId))
+		numDronesOwner = len(playerDronesNearZone(zones[zId].owner, zId, 0))
 	} else {
 		numDronesOwner = mostDronesBySingleOponentInZone(zId)
 	}
@@ -250,11 +250,11 @@ func attackable(zId int) bool {
 	}
 	var numDronesOwner int
 	if zones[zId].owner != UNRECLAIMED {
-		numDronesOwner = len(playerDronesInZone(zones[zId].owner, zId))
+		numDronesOwner = len(playerDronesNearZone(zones[zId].owner, zId, 0))
 	} else {
 		numDronesOwner = mostDronesBySingleOponentInZone(zId)
 	}
-	myDronesInZone := playerDronesInZone(whoami, zId)
+	myDronesInZone := playerDronesNearZone(whoami, zId, 0)
 	for dId, _ := range myDronesInZone {
 		if !isAssigned(dId) || turnBasedDistance(zones[zId].pos, nextMove[dId]) > 0 {
 			delete(myDronesInZone, dId)
@@ -277,6 +277,48 @@ func initializeTurnComputation() {
 	}
 }
 
+//Calculates the movements of the drones can make without geopardizing the zone they protect
+func calculateDonesAvailableDistances() {
+	for zId, _ := range zones {
+		if zones[zId].owner == whoami {
+			for i := 1; i < 10; i += 1 { //10 is totally arbitrary
+				myDronesSet := playerDronesNearZone(whoami, zId, i-1)
+				myDrones := make([]bool, numDronesPerplayer)
+				for dId, _ := range myDronesSet {
+					myDrones[dId] = true
+				}
+				numEnemies := maxEnemiesNearZone(zId, i)
+				if numEnemies > len(myDrones) {
+					break //Nothing to do. Air superiority is lost at this distance.
+				}
+				numDronesLocked := 0
+				for dId, inSet := range myDrones {
+					if inSet {
+						setAvailableDistance(dId, i-1)
+						numDronesLocked++
+						if numDronesLocked > numEnemies { //enoug drones locked for this menace
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+//Calculates the maximum number of foes from the same enemy at given distance of given zone
+func maxEnemiesNearZone(zId, dist int) (result int) {
+	for pId, _ := range players {
+		if pId == whoami {
+			continue
+		}
+		if num := len(playerDronesNearZone(pId, zId, dist)); num > result {
+			result = num
+		}
+	}
+	return
+}
+
 //Returns the number of drones of the oponent who has most oponents in the given zone
 func mostDronesBySingleOponentInZone(zId int) int {
 	result := 0
@@ -284,18 +326,18 @@ func mostDronesBySingleOponentInZone(zId int) int {
 		if pId == whoami {
 			continue
 		}
-		if currentPlayerDronesInZone := len(playerDronesInZone(pId, zId)); currentPlayerDronesInZone > result {
+		if currentPlayerDronesInZone := len(playerDronesNearZone(pId, zId, 0)); currentPlayerDronesInZone > result {
 			result = currentPlayerDronesInZone
 		}
 	}
 	return result
 }
 
-//Returns a set of ids of the drones of given player that are inside given zone
-func playerDronesInZone(pId, zId int) map[int]bool {
+//Returns a set of ids of the drones of given player that are inside given distance of given zone
+func playerDronesNearZone(pId, zId, dist int) map[int]bool {
 	result := make(map[int]bool)
 	for dId, d := range players[pId].drones {
-		if turnBasedDistance(zones[zId].pos, d) == 0 {
+		if turnBasedDistance(zones[zId].pos, d) <= dist {
 			result[dId] = true
 		}
 	}
@@ -405,7 +447,7 @@ func getCentroid(zs []zone) (result point) {
 
 //returns true iff given drone is already assigned to a destination
 func isAssigned(dId int) bool {
-	return availability.drones[dId] == 0
+	return availableDistance(dId) == 0
 }
 
 //Returns the number of assigned drones
@@ -416,6 +458,18 @@ func numAssignedDrones() (result int) {
 		}
 	}
 	return result
+}
+
+//Returns the available distance for the drone. i.e. the distance the drone can safely move
+func availableDistance(dId int) int {
+	return availability.drones[dId]
+}
+
+//Sets the distance the drone can safely fly
+func setAvailableDistance(dId, dist int) {
+	if availability.drones[dId] > dist {
+		availability.drones[dId] = dist
+	}
 }
 
 /* GENERAL UTILITIES END   *********************************************** INPUT PARSING - RELATED OPERATIONS BEGIN ***/
@@ -512,6 +566,8 @@ func letTheGameBegin() {
 func play() {
 	initializeTurnComputation()
 
+	calculateDonesAvailableDistances()
+
 	strategyMaintainAirSuperiority()
 	//strategyColonizeTheUnexplored()
 	//strategyGoForUnguardedZones()
@@ -605,4 +661,5 @@ IDEAS:
 - Last strategy: go for the "centroid" (the center of all zones)
 - Decide nearest drone per euclidean distance instead of per turns?
 - ¿Would it be better to begin conquering non-obvious zones?
+- IMPORTANT!!! Implement a strategy to protect zones unsufficiently guarded
 */

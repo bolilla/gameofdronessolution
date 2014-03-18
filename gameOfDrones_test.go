@@ -245,21 +245,21 @@ func TestMaintainAirSuperiority2Vs1Plus1(t *testing.T) {
 	}
 }
 
-//Tests method playerDronesInZone when there is no drone in the zone
-func TestPlayerDronesInZoneZero(t *testing.T) {
+//Tests method playerDronesNearZone when there is no drone in the zone
+func TestPlayerDronesNearZoneZero(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input0.txt", t)
-	drones := playerDronesInZone(0, 2)
+	drones := playerDronesNearZone(0, 2, 0)
 
 	if len(drones) != 0 {
 		t.Error("Wrong number of drones in zone:", len(drones))
 	}
 }
 
-//Tests method playerDronesInZone when there is one drone in the zone
-func TestPlayerDronesInZoneOne(t *testing.T) {
+//Tests method playerDronesNearZone when there is one drone in the zone
+func TestPlayerDronesNearZoneOne(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input1.txt", t)
 
-	drones := playerDronesInZone(0, 2)
+	drones := playerDronesNearZone(0, 2, 0)
 
 	if len(drones) != 1 {
 		t.Error("Wrong number of drones in zone:", len(drones))
@@ -269,10 +269,10 @@ func TestPlayerDronesInZoneOne(t *testing.T) {
 	}
 }
 
-//Tests method playerDronesInZone when there are two drones in the zone
-func TestPlayerDronesInZoneTwo(t *testing.T) {
+//Tests method playerDronesNearZone when there are two drones in the zone
+func TestPlayerDronesNearZoneTwo(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input2.txt", t)
-	drones := playerDronesInZone(0, 2)
+	drones := playerDronesNearZone(0, 2, 0)
 
 	if len(drones) != 2 {
 		t.Error("Wrong number of drones in zone:", len(drones))
@@ -281,6 +281,43 @@ func TestPlayerDronesInZoneTwo(t *testing.T) {
 		t.Error("Wrong drone in the zone", drones)
 	}
 	if _, isThere := drones[1]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+}
+
+//Tests method playerDronesNearZone when there is one drone at distance 0, one at distance 1 and one at distance 2
+func TestPlayerDronesNearZoneIncrementalDistance(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"playerDronesInZone\\input3.txt", t)
+	drones := playerDronesNearZone(0, 0, 0)
+	if len(drones) != 1 {
+		t.Error("Wrong number of drones in zone:", len(drones))
+	}
+	if _, isThere := drones[0]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+
+	drones = playerDronesNearZone(0, 0, 1)
+	if len(drones) != 2 {
+		t.Error("Wrong number of drones in zone:", len(drones))
+	}
+	if _, isThere := drones[0]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+	if _, isThere := drones[1]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+
+	drones = playerDronesNearZone(0, 0, 2)
+	if len(drones) != 3 {
+		t.Error("Wrong number of drones in zone:", len(drones))
+	}
+	if _, isThere := drones[0]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+	if _, isThere := drones[1]; !isThere {
+		t.Error("Wrong drone in the zone", drones)
+	}
+	if _, isThere := drones[2]; !isThere {
 		t.Error("Wrong drone in the zone", drones)
 	}
 }
@@ -567,4 +604,77 @@ func getAssignedDrones() map[int]bool {
 		}
 	}
 	return result
+}
+
+//Tests method availableDistance
+func TestAvailableDistance(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"toCentre\\input.txt", t)
+	if availableDistance(0) != MAX_DISTANCE {
+		t.Error("All drones should be free as birds")
+	}
+	if isAssigned(0) {
+		t.Error("Drone should NOT be assigned")
+	}
+	setAvailableDistance(0, 5)
+	if availableDistance(0) != 5 {
+		t.Error("Drone availability should be 5")
+	}
+	if isAssigned(0) {
+		t.Error("Drone should NOT be (completely) assigned")
+	}
+	setAvailableDistance(0, 0)
+	if availableDistance(0) != 0 {
+		t.Error("Drone availability should be 0")
+	}
+	if !isAssigned(0) {
+		t.Error("Drone should be completely assigned")
+	}
+	setAvailableDistance(0, MAX_DISTANCE)
+	if availableDistance(0) != 0 {
+		t.Error("Available distance cannot be increased")
+	}
+}
+
+//Tests method calculateDonesAvailableDistances when the zone is not mine
+func TestCalculateDonesAvailableDistancesNotMine(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"calculateAvailableDistances\\input2.txt", t)
+	calculateDonesAvailableDistances()
+	for i := 0; i < numDronesPerplayer; i += 1 {
+		if availableDistance(i) != MAX_DISTANCE {
+			t.Error("Drone", i, "should be free. Zone does not belong to me")
+		}
+	}
+}
+
+//Tests method calculateDonesAvailableDistances when the zone is mine
+func TestCalculateDonesAvailableDistancesMine(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"calculateAvailableDistances\\input2.txt", t)
+	zones[0].owner = whoami
+	calculateDonesAvailableDistances()
+	if availableDistance(0) != 0 {
+		t.Error("Drone 0 should stay put because there is an enemy at distance 0", availability)
+	}
+	if availableDistance(1) != 0 {
+		t.Error("Drone 1 should stay put because there is an enemy at distance 1", availability)
+	}
+	if availableDistance(2) != 1 {
+		t.Error("Drone 2 should be able to move 1 because there is an enemy at distance 2", availability)
+	}
+	if availableDistance(3) != MAX_DISTANCE {
+		t.Error("Drone 3 should not be constrained, because it is outside the zone", availability)
+	}
+}
+
+//Tests method maxEnemiesNearZone
+func TestMaxEnemiesNearZone(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"maxEnemyesNearZone\\input.txt", t)
+	if maxEnemiesNearZone(0, 0) != 1 {
+		t.Error("There should only be one enemy at distance zero from zone")
+	}
+	if maxEnemiesNearZone(0, 1) != 2 {
+		t.Error("There should be two enemies at distance one from zone")
+	}
+	if maxEnemiesNearZone(0, 2) != 5 {
+		t.Error("There should be five enemies at distance two from zone")
+	}
 }
