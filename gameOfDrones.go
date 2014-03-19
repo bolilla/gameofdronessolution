@@ -131,19 +131,6 @@ func strategyAttackGuardedZones() {
 }
 
 //Calculates the movements for unasigned drones based on the following strategy:
-//- If there is an unguarded zone, nearest drone goes to take it
-func strategyGoForUnguardedZones() {
-	for zId, z := range zones {
-		if z.owner != UNRECLAIMED && z.owner != whoami && len(playerDronesNearZone(z.owner, zId, 0)) == 0 {
-			dId := nearestFreeOwnDrone(z.pos)
-			if dId >= 0 {
-				assignDestinationZone(dId, zId, "Zone is unguarded")
-			}
-		}
-	}
-}
-
-//Calculates the movements for unasigned drones based on the following strategy:
 //- If (1+ drone is inside an owned zone AND there are enemies in the same zone)
 //    air superiority cannot be lost (cannot abandon zone and leave air superiority to the oponent)
 func strategyMaintainAirSuperiority() {
@@ -162,34 +149,6 @@ func strategyMaintainAirSuperiority() {
 				}
 			}
 		}
-	}
-}
-
-//Calculates the movements for unasigned drones based on the following strategy:
-//- If there is an unreclaimed zone:
-//  + Drones inside that zone stay put
-//  + Nearest drone (outside the zone) goes for it
-func strategyColonizeTheUnexplored() {
-	for zId, _ := range unreclaimedZones() {
-		for dId, d := range players[whoami].drones {
-			if turnBasedDistance(d, zones[zId].pos) == 0 {
-				assignDestinationZone(dId, zId, "I am in an unreclaimed zone and so is the enemy")
-			}
-		}
-		if dId := nearestFreeOwnDrone(zones[zId].pos); dId != -1 {
-			assignDestinationZone(dId, zId, "Zone is unguarded")
-		}
-	}
-}
-
-//Calculates the movements for the remaining drones based on the following strategy:
-//- Each remaining drone moves to the centroid of the board
-func strategyDefaultToCentroid() {
-	for dId := 0; dId < numDronesPerplayer; dId += 1 {
-		if isAssigned(dId) {
-			continue
-		}
-		assignDestinationPointNoisy(dId, centroid, "The centroid must be ours")
 	}
 }
 

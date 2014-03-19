@@ -87,68 +87,6 @@ func TestEuclideanDistance(t *testing.T) {
 	}
 }
 
-//Tests method strategyColonizeTheUnexplored with Zero unexplored zones
-func TestColonizeTheUnexploredZero(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputZero.txt", t)
-	strategyColonizeTheUnexplored()
-	if numAssignedDrones() != 0 {
-		t.Error("Too many drones asigned:", numAssignedDrones())
-	}
-}
-
-//Tests method strategyColonizeTheUnexplored with One unexplored zone
-func TestColonizeTheUnexploredOne(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputOne.txt", t)
-	strategyColonizeTheUnexplored()
-	if numAssignedDrones() != 1 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	for d, _ := range getAssignedDrones() {
-		if nextMove[d].x != 100 || nextMove[d].y != 100 {
-			t.Error("Wrong movement. Going to", nextMove[d])
-		}
-	}
-}
-
-//Tests method strategyColonizeTheUnexplored with Two unexplored zones
-func TestColonizeTheUnexploredTwo(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputTwo.txt", t)
-	strategyColonizeTheUnexplored()
-	if numAssignedDrones() != 2 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	destinations := make(map[point]bool, 2)
-	for d, _ := range getAssignedDrones() {
-		if (nextMove[d].x == 100 && nextMove[d].y == 100) ||
-			(nextMove[d].x == 200 && nextMove[d].y == 200) {
-			destinations[nextMove[d]] = true
-		}
-	}
-	if len(destinations) != 2 {
-		t.Error("Wrong number of different destinations:", len(destinations))
-	}
-}
-
-//Tests method strategyColonizeTheUnexplored with an unreclaimed zone that already contains drones from different players
-func TestColonizeTheUnexploredUnreclaimedPopulated(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"colonizeTheUnexplored\\inputUnconqueredButPopulated.txt", t)
-	strategyColonizeTheUnexplored()
-	if numAssignedDrones() != 2 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	destinations := make(map[point]bool, 2)
-	for d, _ := range getAssignedDrones() {
-		if nextMove[d].x != 100 || nextMove[d].y != 100 {
-			t.Error("Wrong movement. Going to", nextMove[d])
-		} else {
-			destinations[nextMove[d]] = true
-		}
-	}
-	if len(destinations) != 1 {
-		t.Error("Wrong number of different destinations:", len(destinations), getAssignedDrones())
-	}
-}
-
 //Tests method strategyMaintainAirSuperiority with zero zones owned
 func TestMaintainAirSuperiority0(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"maintainAirSuperiority\\inputOwned0.txt", t)
@@ -322,73 +260,6 @@ func TestPlayerDronesNearZoneIncrementalDistance(t *testing.T) {
 	}
 }
 
-//Tests method strategyGoForUnguardedZones when there are no unguarded zones
-func TestGoForUnguardedZonesZero(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input0.txt", t)
-	strategyGoForUnguardedZones()
-
-	if numAssignedDrones() != 0 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-}
-
-//Tests method strategyGoForUnguardedZones when there is one unguarded zone and three available drones
-func TestGoForUnguardedZonesOneForThree(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input1For3.txt", t)
-	strategyGoForUnguardedZones()
-
-	if numAssignedDrones() != 1 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[1]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if nextMove[1].x != 300 || nextMove[1].y != 300 {
-		t.Error("Wrong move", nextMove[1])
-	}
-}
-
-//Tests method strategyGoForUnguardedZones when there are two unguarded zones and one available drone
-func TestGoForUnguardedZonesTwoForOne(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input2For1.txt", t)
-	assignDestinationPoint(0, point{0, 0})
-	assignDestinationPoint(1, point{0, 0})
-	strategyGoForUnguardedZones()
-
-	if numAssignedDrones() != 3 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[2]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if nextMove[2].x != 200 || nextMove[2].y != 200 {
-		t.Error("Wrong move", nextMove[2])
-	}
-}
-
-//Tests method strategyGoForUnguardedZones when there are two unguarded zones and two available drones
-func TestGoForUnguardedZonesTwoForTwo(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"goForUnguarded\\input2For2.txt", t)
-	assignDestinationPoint(0, point{0, 0})
-	strategyGoForUnguardedZones()
-
-	if numAssignedDrones() != 3 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[0]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[1]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if nextMove[1].x != 200 || nextMove[1].y != 200 {
-		t.Error("Wrong move", nextMove[1])
-	}
-	if nextMove[2].x != 300 || nextMove[2].y != 300 {
-		t.Error("Wrong move", nextMove[2])
-	}
-}
-
 //Sets up the test reading current status from a certain file
 func setUpTestFromFile(path string, t *testing.T) {
 	if f, err := os.Open(path); err != nil {
@@ -416,35 +287,6 @@ func TestGetCentroid(t *testing.T) {
 		if result := getCentroid(testCase.in); testCase.out != result {
 			t.Error("Error in item", i, "Got", result, "Expected", testCase.out, "Case:", testCase)
 		}
-	}
-}
-
-//Tests method defaultToCentroid
-func TestDefaultToCentre(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"toCentre\\input.txt", t)
-	assignDestinationPoint(0, point{0, 0})
-	strategyDefaultToCentroid()
-
-	if numAssignedDrones() != 3 {
-		t.Error("Wrong number of drones asigned:", numAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[0]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[1]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if _, isThere := getAssignedDrones()[2]; !isThere {
-		t.Error("Wrong drone in the zone", getAssignedDrones())
-	}
-	if nextMove[0].x != 0 || nextMove[0].y != 0 {
-		t.Error("Wrong move", nextMove[0])
-	}
-	if nextMove[1].x != getCentroid(zones).x || nextMove[1].y != getCentroid(zones).x {
-		t.Error("Wrong move", nextMove[1])
-	}
-	if nextMove[2].x != getCentroid(zones).x || nextMove[2].y != getCentroid(zones).x {
-		t.Error("Wrong move", nextMove[2])
 	}
 }
 
