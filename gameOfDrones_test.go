@@ -290,77 +290,6 @@ func TestGetCentroid(t *testing.T) {
 	}
 }
 
-//Tests method attackable:
-//- Test 1
-//  + Zone 0 is not attackable because it is unreclaimed
-//  + If I set zone0 to the enemy, it is attackable
-//  + If I set zone0 to myself, it is no longer attackable
-// - Test2
-//  + Zone 2 is not attackable because it contains three enemy drones and I only have three available free
-//  + If I remove one of enemy's drones, it is attackable
-//  + If I asign a drone to any destination, it is not attackable
-//  + If I put all drones in the zone and unassigned, it is NOT attackable because I cannot gain air superiority
-//  + If I remove one of enemy's drones, it is attackable
-func TestAttackable(t *testing.T) {
-	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\input.txt", t)
-	attackableTest1(t)
-	attackableTest2(t)
-}
-
-//Described abobe
-func attackableTest1(t *testing.T) {
-	if !attackable(0) {
-		t.Error("Zone 0 should be attackable because it should be unreclaimed.", zones[0])
-	}
-	zones[0].owner = whoami + 1
-	if !attackable(0) {
-		t.Error("Zone 0 should be attackable.", zones[0])
-	}
-	zones[0].owner = whoami
-	if attackable(0) {
-		t.Error("Zone 0 should NOT be attackable. It belongs to me", zones[0])
-	}
-}
-
-//Described abobe
-func attackableTest2(t *testing.T) {
-	if attackable(2) {
-		t.Error("Zone 2 should NOT be attackable. I cannot gain air superiority", status())
-	}
-	players[1].drones[0] = point{0, 0}
-	if !attackable(2) {
-		t.Error("Zone 2 should be attackable. I should be able to gain air superiority (even when all my drones are unassigned).", status())
-	}
-	assignDestinationZone(0, 2, "I say so") //should work even when destination is the zone I pretend to atack
-	if attackable(2) {
-		t.Error("Zone 2 should NOT be attackable. I have assigned one drone and only two should be available.", status())
-	}
-	players[whoami].drones[0] = zones[2].pos //If drone 0 is inside the zone, but will remain there, I can achieve air superiority
-	if !attackable(2) {
-		t.Error("Zone 2 should be attackable. I have assigned one drone and only two should be available, but assigned drone is to remain inside the zone.", status())
-	}
-	assignDestinationPoint(0, point{0, 0}) //If drone 0 is inside the zone, but will go out (assigned to go out), I cannot gain air superiority
-	if attackable(2) {
-		t.Error("Zone 2 should NOT be attackable. I have assigned one drone to go out of the zone and only two should be available.", status())
-	}
-	initializeTurnComputation() //To free up all drones
-	for pId, _ := range players {
-		for dId, _ := range players[pId].drones {
-			players[pId].drones[dId] = zones[2].pos
-		}
-	}
-	for dId, _ := range players[whoami].drones {
-		assignDestinationZone(dId, 2, "I say so")
-	}
-	if attackable(2) {
-		t.Error("Zone 2 should NOT be attackable. I cannot gain air superiority (even when all my drones are inside the zone", status())
-	}
-	players[1].drones[0] = point{0, 0}
-	if !attackable(2) {
-		t.Error("Zone 2 should be attackable. I have enough drones inside the zone", status())
-	}
-}
-
 //Tests method nearestFreeOwnDrone
 func TestNearestFreeOwnDrone(t *testing.T) {
 	setUpTestFromFile(FILE_TESTS_BASE+"NearestFreeOwnDrone\\input.txt", t)
@@ -368,11 +297,17 @@ func TestNearestFreeOwnDrone(t *testing.T) {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(0, point{0, 0})
+	players[whoami].drones[0] = point{0, 0}
 	if result := nearestFreeOwnDrone(zones[0].pos); result != 1 {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(1, point{0, 0})
+	players[whoami].drones[1] = point{0, 0}
 	if result := nearestFreeOwnDrone(zones[0].pos); result != 2 {
+		t.Error("Nearest unasigned drone:", result)
+	}
+	setAvailableDistance(2, 1)
+	if result := nearestFreeOwnDrone(zones[0].pos); result != -1 {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(2, point{0, 0})
@@ -388,27 +323,27 @@ func TestNearestOwnDroneFromSet(t *testing.T) {
 	set[0] = true
 	set[2] = true
 	set[1] = true
-	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 0 {
+	if result, move := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 0 || !move {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationZone(0, 0, "I say so")
-	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 0 {
+	if result, move := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 0 || move {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(0, point{0, 0})
-	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 1 {
+	if result, move := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 1 || !move {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	delete(set, 0)
-	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 1 {
+	if result, move := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 1 || !move {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(1, point{0, 0})
-	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 2 {
+	if result, move := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != 2 || !move {
 		t.Error("Nearest unasigned drone:", result)
 	}
 	assignDestinationPoint(2, point{0, 0})
-	if result := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != -1 {
+	if result, move := nearestOwnDroneToGoFromSet(zones[0].pos, set); result != -1 || move {
 		t.Error("Nearest unasigned drone:", result)
 	}
 }
@@ -518,5 +453,102 @@ func TestMaxEnemiesNearZone(t *testing.T) {
 	}
 	if maxEnemiesNearZone(0, 2) != 5 {
 		t.Error("There should be five enemies at distance two from zone")
+	}
+}
+
+//Tests bestAttackToZone based on whom the zone belongs to
+func TestAttackableByOwner(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\input.txt", t)
+	zones[0].owner = whoami
+	if _, attackable := bestAttackToZone(0); attackable {
+		t.Error("Zone 0 should not be attackable because it is mine")
+	}
+	zones[0].owner = -1
+	if _, attackable := bestAttackToZone(0); !attackable {
+		t.Error("Zone 0 should be attackable because it is NOT mine")
+	}
+	zones[0].owner = 1
+	if _, attackable := bestAttackToZone(0); !attackable {
+		t.Error("Zone 0 should be attackable because it is NOT mine")
+	}
+}
+
+//Tests bestAttackToZone when there is no enemy near and all my drones are available
+func TestAttackableWhithNoEnemiesAllAvailable(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputNoEnemies.txt", t)
+	if a, attackable := bestAttackToZone(0); !attackable || len(a.force) != 1 || !a.force[1] {
+		t.Error("Zone 0 should be attackable by drone 1 alone because it is the nearest one", a)
+	}
+}
+
+//Tests bestAttackToZone when there is no enemy near but all my drones are unavailable
+func TestAttackableWhithNoEnemiesUnavailableDrones(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputNoEnemies.txt", t)
+	assignDestinationPoint(0, point{0, 0})
+	assignDestinationPoint(1, point{0, 0})
+	assignDestinationPoint(2, point{0, 0})
+	if a, attackable := bestAttackToZone(0); attackable || len(a.force) != 0 {
+		t.Error("Zone 0 should NOT be attackable because no drone is available", a)
+	}
+}
+
+//Tests bestAttackToZone when there is no enemy near but all my drones have availability under the required one
+func TestAttackableWhithNoEnemiesLittleAvailableDrones(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputNoEnemies.txt", t)
+	setAvailableDistance(0, 2)
+	setAvailableDistance(1, 1)
+	setAvailableDistance(2, 3)
+	if a, attackable := bestAttackToZone(0); attackable || len(a.force) != 0 {
+		t.Error("Zone 0 should NOT be attackable because no drone is available enough", a)
+	}
+}
+
+//Tests bestAttackToZone when there is one enemy in the zone
+func TestAttackableWhithOneEnemyInSitu(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputOneEnemyInSitu.txt", t)
+	if a, attackable := bestAttackToZone(0); !attackable || len(a.force) != 2 || !a.force[0] || !a.force[1] {
+		t.Error("Zone 0 should be attackable by drones 0 and 1", a)
+	}
+}
+
+//Tests bestAttackToZone when there is one enemy near (distance 2)
+func TestAttackableWhithOneEnemyNear(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputOneEnemyNear.txt", t)
+	if a, attackable := bestAttackToZone(0); !attackable || len(a.force) != 2 || !a.force[0] || !a.force[1] {
+		t.Error("Zone 0 should be attackable by drones 0 and 1", a)
+	}
+}
+
+//Tests bestAttackToZone when there are two drones at distance 0. I have two drones unavailable but inside the zone and one additional drone at distance 3.
+func TestAttackableWhithTwoEnemiesAndOwnForcesInSitu(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputTwoEnemiesWeReinforce.txt", t)
+	assignDestinationPoint(0, point{100, 100})
+	assignDestinationPoint(1, point{100, 100})
+	if a, attackable := bestAttackToZone(0); !attackable || len(a.force) != 3 || !a.force[0] || !a.force[1] || !a.force[2] {
+		t.Error("Zone 0 should be attackable by three drones", a)
+	}
+}
+
+//Tests the distance calculation of an attack
+func TestAttackDistanceCalculation(t *testing.T) {
+	setUpTestFromFile(FILE_TESTS_BASE+"attackable\\inputAttackDistance.txt", t)
+	var a1, a2, a3 attack
+	a1.target, a2.target, a3.target = 0, 0, 0
+	a1.force, a2.force, a3.force = make(map[int]bool), make(map[int]bool), make(map[int]bool)
+	a2.force[1] = true
+	a3.force[0] = true
+	a3.force[1] = true
+	a3.force[2] = true
+	a1.calculateLength()
+	a2.calculateLength()
+	a3.calculateLength()
+	if a1.distance != 0 {
+		t.Error("Length of attack is not correctly calculated", a1)
+	}
+	if a2.distance != 2 {
+		t.Error("Length of attack is not correctly calculated", a2)
+	}
+	if a3.distance != 2 {
+		t.Error("Length of attack is not correctly calculated", a3)
 	}
 }
